@@ -59,6 +59,7 @@ impl<T: Serialize + DeserializeOwned + Send + Sync> JsonStore<T> {
         let mut file = tokio::fs::File::create(&tmp).await?;
         file.write_all(json.as_bytes()).await?;
         file.flush().await?;
+        file.sync_all().await?;
         drop(file);
         tokio::fs::rename(&tmp, self.path(id)).await?;
         Ok(())
