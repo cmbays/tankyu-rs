@@ -4,17 +4,6 @@ use tankyu_core::domain::types::*;
 use uuid::Uuid;
 
 // Helper strategies
-#[allow(dead_code)]
-fn uuid_strategy() -> impl Strategy<Value = Uuid> {
-    any::<[u8; 16]>().prop_map(|bytes| {
-        let mut b = bytes;
-        // Set version 4 bits
-        b[6] = (b[6] & 0x0f) | 0x40;
-        b[8] = (b[8] & 0x3f) | 0x80;
-        Uuid::from_bytes(b)
-    })
-}
-
 fn source_state_strategy() -> impl Strategy<Value = SourceState> {
     prop_oneof![
         Just(SourceState::Active),
@@ -142,6 +131,7 @@ proptest! {
         prop_assert_eq!(source.id, restored.id);
         prop_assert_eq!(source.check_count, restored.check_count);
         prop_assert_eq!(source.hit_count, restored.hit_count);
+        prop_assert_eq!(source.miss_count, restored.miss_count);
     }
 
     #[test]
