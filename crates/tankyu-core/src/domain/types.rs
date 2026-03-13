@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 // ── Source enums ──────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum SourceState {
     Active,
@@ -13,7 +13,7 @@ pub enum SourceState {
     Pruned,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum SourceType {
     XAccount,
@@ -29,7 +29,7 @@ pub enum SourceType {
     AgentReport,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum SourceRole {
     Starred,
@@ -39,7 +39,7 @@ pub enum SourceRole {
 
 // ── Entry enums ───────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum EntryState {
     New,
@@ -49,7 +49,7 @@ pub enum EntryState {
     Archived,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum EntryType {
     Tweet,
@@ -63,7 +63,7 @@ pub enum EntryType {
     SpikeReport,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Signal {
     High,
@@ -74,7 +74,7 @@ pub enum Signal {
 
 // ── Graph enums ───────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum EdgeType {
     Monitors,
@@ -94,7 +94,7 @@ pub enum EdgeType {
     Synthesizes,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum NodeType {
     Topic,
@@ -105,7 +105,7 @@ pub enum NodeType {
     Entity,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum ClassificationMethod {
     SourceRule,
@@ -116,7 +116,7 @@ pub enum ClassificationMethod {
 
 // ── Insight / Entity enums ────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum InsightType {
     ResearchNote,
@@ -124,7 +124,7 @@ pub enum InsightType {
     Briefing,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum EntityType {
     Person,
@@ -187,9 +187,9 @@ mod tests {
         ];
         for (variant, expected_json) in cases {
             let json = serde_json::to_string(&variant).unwrap();
-            assert_eq!(json, expected_json);
+            assert_eq!(json, expected_json, "serialize {variant:?}");
             let restored: SourceRole = serde_json::from_str(&json).unwrap();
-            assert_eq!(restored, variant);
+            assert_eq!(restored, variant, "deserialize {variant:?}");
         }
     }
 
@@ -204,9 +204,9 @@ mod tests {
         ];
         for (variant, expected_json) in cases {
             let json = serde_json::to_string(&variant).unwrap();
-            assert_eq!(json, expected_json);
+            assert_eq!(json, expected_json, "serialize {variant:?}");
             let restored: EntryState = serde_json::from_str(&json).unwrap();
-            assert_eq!(restored, variant);
+            assert_eq!(restored, variant, "deserialize {variant:?}");
         }
     }
 
@@ -241,30 +241,30 @@ mod tests {
         ];
         for (variant, expected_json) in cases {
             let json = serde_json::to_string(&variant).unwrap();
-            assert_eq!(json, expected_json);
+            assert_eq!(json, expected_json, "serialize {variant:?}");
             let restored: Signal = serde_json::from_str(&json).unwrap();
-            assert_eq!(restored, variant);
+            assert_eq!(restored, variant, "deserialize {variant:?}");
         }
     }
 
     #[test]
     fn edge_type_roundtrips() {
         let cases = [
-            (EdgeType::Monitors,     "\"monitors\""),
-            (EdgeType::Produced,     "\"produced\""),
-            (EdgeType::Yields,       "\"yields\""),
-            (EdgeType::RelatesTo,    "\"relates-to\""),
-            (EdgeType::Supersedes,   "\"supersedes\""),
-            (EdgeType::Contradicts,  "\"contradicts\""),
-            (EdgeType::Informs,      "\"informs\""),
-            (EdgeType::DiscoveredVia,"\"discovered-via\""),
-            (EdgeType::InspiredBy,   "\"inspired-by\""),
-            (EdgeType::TaggedWith,   "\"tagged-with\""),
-            (EdgeType::Mentions,     "\"mentions\""),
-            (EdgeType::Cites,        "\"cites\""),
-            (EdgeType::CoOccursWith, "\"co-occurs-with\""),
-            (EdgeType::DerivedFrom,  "\"derived-from\""),
-            (EdgeType::Synthesizes,  "\"synthesizes\""),
+            (EdgeType::Monitors,      "\"monitors\""),
+            (EdgeType::Produced,      "\"produced\""),
+            (EdgeType::Yields,        "\"yields\""),
+            (EdgeType::RelatesTo,     "\"relates-to\""),
+            (EdgeType::Supersedes,    "\"supersedes\""),
+            (EdgeType::Contradicts,   "\"contradicts\""),
+            (EdgeType::Informs,       "\"informs\""),
+            (EdgeType::DiscoveredVia, "\"discovered-via\""),
+            (EdgeType::InspiredBy,    "\"inspired-by\""),
+            (EdgeType::TaggedWith,    "\"tagged-with\""),
+            (EdgeType::Mentions,      "\"mentions\""),
+            (EdgeType::Cites,         "\"cites\""),
+            (EdgeType::CoOccursWith,  "\"co-occurs-with\""),
+            (EdgeType::DerivedFrom,   "\"derived-from\""),
+            (EdgeType::Synthesizes,   "\"synthesizes\""),
         ];
         for (variant, expected_json) in cases {
             let json = serde_json::to_string(&variant).unwrap();
@@ -286,9 +286,9 @@ mod tests {
         ];
         for (variant, expected_json) in cases {
             let json = serde_json::to_string(&variant).unwrap();
-            assert_eq!(json, expected_json);
+            assert_eq!(json, expected_json, "serialize {variant:?}");
             let restored: NodeType = serde_json::from_str(&json).unwrap();
-            assert_eq!(restored, variant);
+            assert_eq!(restored, variant, "deserialize {variant:?}");
         }
     }
 
@@ -301,9 +301,9 @@ mod tests {
         ];
         for (variant, expected_json) in cases {
             let json = serde_json::to_string(&variant).unwrap();
-            assert_eq!(json, expected_json);
+            assert_eq!(json, expected_json, "serialize {variant:?}");
             let restored: InsightType = serde_json::from_str(&json).unwrap();
-            assert_eq!(restored, variant);
+            assert_eq!(restored, variant, "deserialize {variant:?}");
         }
     }
 
@@ -319,9 +319,9 @@ mod tests {
         ];
         for (variant, expected_json) in cases {
             let json = serde_json::to_string(&variant).unwrap();
-            assert_eq!(json, expected_json);
+            assert_eq!(json, expected_json, "serialize {variant:?}");
             let restored: EntityType = serde_json::from_str(&json).unwrap();
-            assert_eq!(restored, variant);
+            assert_eq!(restored, variant, "deserialize {variant:?}");
         }
     }
 
@@ -335,9 +335,9 @@ mod tests {
         ];
         for (variant, expected_json) in cases {
             let json = serde_json::to_string(&variant).unwrap();
-            assert_eq!(json, expected_json);
+            assert_eq!(json, expected_json, "serialize {variant:?}");
             let restored: ClassificationMethod = serde_json::from_str(&json).unwrap();
-            assert_eq!(restored, variant);
+            assert_eq!(restored, variant, "deserialize {variant:?}");
         }
     }
 }
