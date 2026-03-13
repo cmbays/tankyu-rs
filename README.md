@@ -27,3 +27,5 @@ All commands support `--json` for machine-readable output.
 ## Data Directory
 
 Reads `~/.tankyu/` — same directory used by the TypeScript CLI. Both binaries are compatible.
+
+Set `TANKYU_DIR` to override (e.g., `TANKYU_DIR=/tmp/test-data tankyu status`).
