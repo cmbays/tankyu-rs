@@ -118,13 +118,15 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn get_by_name_finds_topic() {
+    async fn get_by_name_finds_correct_topic() {
         let dir = tempdir().unwrap();
         let store = TopicStore::new(dir.path().to_path_buf());
-        let topic = make_topic("nanograph");
-        store.create(topic.clone()).await.unwrap();
+        let target = make_topic("nanograph");
+        let other = make_topic("rust");
+        store.create(target.clone()).await.unwrap();
+        store.create(other.clone()).await.unwrap();
         let found = store.get_by_name("nanograph").await.unwrap();
-        assert_eq!(found.unwrap().id, topic.id);
+        assert_eq!(found.unwrap().id, target.id);
     }
 
     #[tokio::test]

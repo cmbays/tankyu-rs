@@ -140,13 +140,17 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn get_by_content_hash() {
+    async fn get_by_content_hash_finds_correct_entry() {
         let dir = tempdir().unwrap();
         let store = EntryStore::new(dir.path().to_path_buf());
-        let entry = make_entry();
-        store.create(entry.clone()).await.unwrap();
+        let mut target = make_entry();
+        target.content_hash = Some("abc123".to_string());
+        let mut other = make_entry();
+        other.content_hash = Some("def456".to_string());
+        store.create(target.clone()).await.unwrap();
+        store.create(other.clone()).await.unwrap();
         let found = store.get_by_content_hash("abc123").await.unwrap();
-        assert_eq!(found.unwrap().id, entry.id);
+        assert_eq!(found.unwrap().id, target.id);
     }
 
     #[tokio::test]

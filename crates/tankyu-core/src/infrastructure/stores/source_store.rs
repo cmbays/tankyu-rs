@@ -121,16 +121,18 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_then_get_by_url() {
+    async fn get_by_url_finds_correct_source() {
         let dir = tempdir().unwrap();
         let store = SourceStore::new(dir.path().to_path_buf());
-        let source = make_source("https://github.com/cmbays/tankyu");
-        store.create(source.clone()).await.unwrap();
+        let target = make_source("https://github.com/cmbays/tankyu");
+        let other = make_source("https://github.com/cmbays/renshin");
+        store.create(target.clone()).await.unwrap();
+        store.create(other.clone()).await.unwrap();
         let found = store
             .get_by_url("https://github.com/cmbays/tankyu")
             .await
             .unwrap();
-        assert_eq!(found.unwrap().id, source.id);
+        assert_eq!(found.unwrap().id, target.id);
     }
 
     #[tokio::test]

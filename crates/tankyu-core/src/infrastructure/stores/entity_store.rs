@@ -78,13 +78,15 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_then_get_by_name() {
+    async fn get_by_name_finds_correct_entity() {
         let dir = tempdir().unwrap();
         let store = EntityStore::new(dir.path().to_path_buf());
-        let entity = make_entity("Rust");
-        store.create(entity.clone()).await.unwrap();
+        let target = make_entity("Rust");
+        let other = make_entity("Tokio");
+        store.create(target.clone()).await.unwrap();
+        store.create(other.clone()).await.unwrap();
         let found = store.get_by_name("Rust").await.unwrap();
-        assert_eq!(found.unwrap().id, entity.id);
+        assert_eq!(found.unwrap().id, target.id);
     }
 
     #[tokio::test]
