@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: macos-13
+            target: x86_64-apple-darwin
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }}
+      - name: Rename binary for artifact upload
+        run: |
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/tankyu dist/tankyu-${{ matrix.target }}
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tankyu-${{ matrix.target }}
+          path: dist/tankyu-${{ matrix.target }}
+
+  release:
+    needs: build
+    uses: cmbays/ops/.github/workflows/release-rust-binary.yml@main
+    with:
+      binary-name: tankyu
+      tag: ${{ github.ref_name }}
+    secrets: inherit
