@@ -1,0 +1,15 @@
+{
+  "id": "00000000-0000-0000-0000-000000000002",
+  "type": "github-repo",
+  "name": "rust-lang/rust",
+  "url": "https://github.com/rust-lang/rust",
+  "state": "active",
+  "discoveredVia": null,
+  "discoveryReason": null,
+  "lastCheckedAt": null,
+  "lastNewContentAt": null,
+  "checkCount": 5,
+  "hitCount": 3,
+  "missCount": 2,
+  "createdAt": "2024-01-01T00:00:00Z"
+}

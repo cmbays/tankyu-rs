@@ -1,0 +1,10 @@
+{
+  "id": "00000000-0000-0000-0000-000000000005",
+  "type": "research-note",
+  "title": "Rust async patterns",
+  "body": "Key async patterns in the Rust ecosystem.",
+  "keyPoints": ["tokio is the dominant runtime", "async-trait for object-safe async"],
+  "citations": [],
+  "createdAt": "2024-01-01T00:00:00Z",
+  "updatedAt": "2024-01-01T00:00:00Z"
+}

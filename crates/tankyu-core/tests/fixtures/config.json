@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "defaultScanLimit": 20,
+  "staleDays": 7,
+  "dormantDays": 30,
+  "llmClassify": false,
+  "localRepoPaths": {},
+  "registryPath": null
+}

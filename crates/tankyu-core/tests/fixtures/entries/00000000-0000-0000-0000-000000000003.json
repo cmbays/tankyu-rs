@@ -1,0 +1,13 @@
+{
+  "id": "00000000-0000-0000-0000-000000000003",
+  "sourceId": "00000000-0000-0000-0000-000000000002",
+  "type": "commit",
+  "title": "Stabilize feature X",
+  "url": "https://github.com/rust-lang/rust/commit/abc123",
+  "summary": null,
+  "contentHash": null,
+  "state": "new",
+  "signal": null,
+  "scannedAt": "2024-01-02T00:00:00Z",
+  "createdAt": "2024-01-02T00:00:00Z"
+}

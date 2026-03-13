@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "edges": [
+    {
+      "id": "00000000-0000-0000-0000-000000000004",
+      "fromId": "00000000-0000-0000-0000-000000000001",
+      "fromType": "topic",
+      "toId": "00000000-0000-0000-0000-000000000002",
+      "toType": "source",
+      "edgeType": "monitors",
+      "reason": "topic monitors source",
+      "createdAt": "2024-01-01T00:00:00Z"
+    }
+  ]
+}
