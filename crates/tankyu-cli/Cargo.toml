@@ -1,0 +1,31 @@
+[package]
+name    = "tankyu-cli"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "tankyu"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+tankyu-core        = { path = "../tankyu-core" }
+serde              = { workspace = true }
+serde_json         = { workspace = true }
+uuid               = { workspace = true }
+chrono             = { workspace = true }
+anyhow             = { workspace = true }
+tokio              = { workspace = true }
+clap               = { workspace = true }
+tracing            = { workspace = true }
+tracing-subscriber = { workspace = true }
+comfy-table        = { workspace = true }
+
+[dev-dependencies]
+assert_cmd = { workspace = true }
+insta      = { workspace = true }
+tempfile   = { workspace = true }
