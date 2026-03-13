@@ -1,0 +1,13 @@
+---
+source: crates/tankyu-cli/tests/cli_status.rs
+expression: stdout
+---
++---------+-------+
+| Metric  | Count |
++=================+
+| Topics  | 1     |
+|---------+-------|
+| Sources | 1     |
+|---------+-------|
+| Entries | 0     |
++---------+-------+

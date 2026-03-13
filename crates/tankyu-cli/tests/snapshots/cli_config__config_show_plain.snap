@@ -1,0 +1,9 @@
+---
+source: crates/tankyu-cli/tests/cli_config.rs
+expression: "String::from_utf8(out.stdout).unwrap()"
+---
+Version:            1
+Default scan limit: 20
+Stale days:         7
+Dormant days:       30
+LLM classify:       false

@@ -1,0 +1,5 @@
+---
+source: crates/tankyu-cli/tests/cli_topic.rs
+expression: "String::from_utf8(out.stdout).unwrap()"
+---
+{"id":"11111111-1111-1111-1111-111111111111","name":"rust","description":"Rust programming","tags":["systems"],"projects":[],"createdAt":"2025-01-01T00:00:00Z","updatedAt":"2025-01-01T00:00:00Z","scanCount":5}

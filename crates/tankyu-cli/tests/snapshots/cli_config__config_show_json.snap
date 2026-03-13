@@ -1,0 +1,12 @@
+---
+source: crates/tankyu-cli/tests/cli_config.rs
+expression: "String::from_utf8(out.stdout).unwrap()"
+---
+{
+  "version": 1,
+  "defaultScanLimit": 20,
+  "staleDays": 7,
+  "dormantDays": 30,
+  "llmClassify": false,
+  "localRepoPaths": {}
+}

@@ -1,0 +1,9 @@
+---
+source: crates/tankyu-cli/tests/cli_topic.rs
+expression: "String::from_utf8(out.stdout).unwrap()"
+---
+Name:        rust
+Description: Rust programming
+Tags:        systems
+Scan count:  5
+Created:     2025-01-01

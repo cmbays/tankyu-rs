@@ -1,0 +1,10 @@
+---
+source: crates/tankyu-cli/tests/cli_doctor.rs
+expression: "serde_json::to_string_pretty(&v).unwrap()"
+---
+{
+  "data_dir": "<redacted>",
+  "entry_count": 0,
+  "issues": [],
+  "ok": true
+}
