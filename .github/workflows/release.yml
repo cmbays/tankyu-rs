@@ -39,8 +39,18 @@ jobs:
 
   release:
     needs: build
-    uses: cmbays/ops/.github/workflows/release-rust-binary.yml@main
-    with:
-      binary-name: tankyu
-      tag: ${{ github.ref_name }}
-    secrets: inherit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all binary artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+          merge-multiple: true
+      - name: Create GitHub Release with binaries
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: dist/*
+          generate_release_notes: true
