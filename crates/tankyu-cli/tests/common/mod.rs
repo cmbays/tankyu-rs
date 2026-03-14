@@ -5,6 +5,7 @@ use tempfile::TempDir;
 
 pub const TOPIC_ID: &str = "11111111-1111-1111-1111-111111111111";
 pub const SOURCE_ID: &str = "22222222-2222-2222-2222-222222222222";
+pub const ENTRY_ID: &str = "33333333-3333-3333-3333-333333333333";
 
 pub fn create_fixture() -> TempDir {
     let dir = TempDir::new().unwrap();
@@ -42,6 +43,23 @@ pub fn create_fixture() -> TempDir {
         }),
     );
     write_json(
+        b.join(format!("entries/{ENTRY_ID}.json")),
+        &serde_json::json!({
+            "id": ENTRY_ID,
+            "sourceId": SOURCE_ID,
+            "type": "commit",
+            "title": "feat: add entry management",
+            "url": "https://github.com/rust-lang/rust/commit/abc123",
+            "summary": null,
+            "contentHash": null,
+            "state": "new",
+            "signal": "high",
+            "scannedAt": "2025-01-15T10:00:00Z",
+            "metadata": null,
+            "createdAt": "2025-01-15T10:00:00Z"
+        }),
+    );
+    write_json(
         b.join("graph/edges.json"),
         &serde_json::json!({ "version": 1, "edges": [] }),
     );
@@ -56,4 +74,31 @@ pub fn cmd(dir: &TempDir) -> Command {
     let mut c = Command::cargo_bin("tankyu").unwrap();
     c.env("TANKYU_DIR", dir.path());
     c
+}
+
+/// Write an additional entry fixture to an existing fixture dir.
+pub fn write_entry(
+    dir: &TempDir,
+    id: &str,
+    title: &str,
+    state: &str,
+    signal: Option<&str>,
+) {
+    write_json(
+        dir.path().join(format!("entries/{id}.json")),
+        &serde_json::json!({
+            "id": id,
+            "sourceId": SOURCE_ID,
+            "type": "article",
+            "title": title,
+            "url": format!("https://example.com/{id}"),
+            "summary": null,
+            "contentHash": null,
+            "state": state,
+            "signal": signal,
+            "scannedAt": "2025-01-15T10:00:00Z",
+            "metadata": null,
+            "createdAt": "2025-01-15T10:00:00Z"
+        }),
+    );
 }
