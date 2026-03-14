@@ -1,0 +1,14 @@
+---
+source: crates/tankyu-cli/tests/cli_entry.rs
+expression: "String::from_utf8(out.stdout).unwrap()"
+---
+ID:        33333333-3333-3333-3333-333333333333
+Type:      commit
+State:     new
+Signal:    high
+Title:     feat: add entry management
+URL:       https://github.com/rust-lang/rust/commit/abc123
+Source:    22222222-2222-2222-2222-222222222222
+Summary:   —
+Scanned:   2025-01-15 10:00:00 UTC
+Created:   2025-01-15
