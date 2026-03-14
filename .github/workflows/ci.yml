@@ -33,7 +33,7 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: fmt
-        run: cargo fmt --check
+        run: cargo fmt --all --check
 
       - name: clippy
         run: cargo clippy --all --all-targets -- -D warnings
@@ -41,5 +41,115 @@ jobs:
       - name: test
         run: cargo test --all
 
+      - name: snapshots (no pending reviews)
+        run: |
+          PENDING=$(find . -path ./target -prune -o -name "*.snap.new" -print \
+            | grep ".snap.new" || true)
+          if [ -n "$PENDING" ]; then
+            echo "Unreviewed insta snapshots found:"
+            echo "$PENDING"
+            echo "Run 'cargo insta review' locally before pushing."
+            exit 1
+          fi
+
       - name: build release
         run: cargo build --release
+
+  mutation:
+    name: mutation testing
+    runs-on: ubuntu-latest
+    # Only run on PRs — scoped to changed files, so always relevant at merge time.
+    if: github.event_name == 'pull_request'
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: ubuntu-latest-cargo-mutation-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ubuntu-latest-cargo-mutation-
+
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@main
+
+      - name: Install cargo-mutants
+        run: cargo binstall cargo-mutants --no-confirm
+
+      - name: Find changed tankyu-core source files
+        id: changed
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          FILES=$(git diff "origin/${BASE_REF}...HEAD" --name-only \
+            -- 'crates/tankyu-core/src/**/*.rs' | grep -v '^$' || true)
+          echo "Changed core files:"
+          echo "${FILES:-(none)}"
+          # Write as multiline output
+          {
+            echo "files<<EOF"
+            echo "$FILES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Run mutation testing
+        if: steps.changed.outputs.files != ''
+        env:
+          CHANGED_FILES: ${{ steps.changed.outputs.files }}
+        run: |
+          FILE_ARGS=""
+          while IFS= read -r f; do
+            [ -n "$f" ] && FILE_ARGS="$FILE_ARGS --file $f"
+          done <<< "$CHANGED_FILES"
+
+          echo "Running: cargo mutants -p tankyu-core $FILE_ARGS"
+          cargo mutants -p tankyu-core $FILE_ARGS 2>&1 | tee mutants_output.txt
+
+          # Parse summary: "N mutants tested in Xs: M caught, T timeout, X missed, U unviable"
+          SUMMARY=$(grep -E "[0-9]+ mutants tested" mutants_output.txt | tail -1)
+          echo "Summary: $SUMMARY"
+
+          CAUGHT=$(echo "$SUMMARY" | grep -oE '[0-9]+ caught' | grep -oE '[0-9]+' || echo 0)
+          MISSED=$(echo "$SUMMARY" | grep -oE '[0-9]+ missed' | grep -oE '[0-9]+' || echo 0)
+          TOTAL=$(( ${CAUGHT:-0} + ${MISSED:-0} ))
+
+          if [ "$TOTAL" -eq 0 ]; then
+            echo "No viable mutants — skipping kill rate check."
+            echo "## Mutation: no viable mutants" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          RATE=$(( CAUGHT * 100 / TOTAL ))
+          echo ""
+          echo "=== Kill rate: ${CAUGHT}/${TOTAL} = ${RATE}% ==="
+
+          {
+            echo "## Mutation Kill Rate: ${RATE}% (${CAUGHT}/${TOTAL} mutants killed)"
+            if [ "$RATE" -lt 80 ]; then
+              echo ":x: Below the 80% threshold — add tests to kill surviving mutants."
+            else
+              echo ":white_check_mark: Meets the 80% threshold."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$RATE" -lt 80 ]; then
+            echo "FAIL: Kill rate ${RATE}% is below the 80% threshold."
+            exit 1
+          fi
+
+      - name: Skip message
+        if: steps.changed.outputs.files == ''
+        run: |
+          echo "No tankyu-core source files changed — mutation testing skipped."
+          echo "## Mutation: skipped (no core source changes)" >> "$GITHUB_STEP_SUMMARY"

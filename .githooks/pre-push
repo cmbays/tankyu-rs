@@ -1,0 +1,25 @@
+#!/bin/sh
+# Pre-push hook: full suite + snapshot integrity check
+# Installed via: git config core.hooksPath .githooks
+
+set -e
+
+echo "pre-push: running full test suite..."
+cargo test --all || {
+    echo ""
+    echo "ERROR: Tests failed. Fix before pushing."
+    exit 1
+}
+
+echo "pre-push: checking for unreviewed insta snapshots..."
+PENDING=$(find . -path ./target -prune -o -name "*.snap.new" -print | grep ".snap.new" || true)
+if [ -n "$PENDING" ]; then
+    echo ""
+    echo "ERROR: Unreviewed insta snapshots found:"
+    echo "$PENDING"
+    echo ""
+    echo "Run 'cargo insta review' to accept or reject, then re-stage and push."
+    exit 1
+fi
+
+echo "pre-push: OK"

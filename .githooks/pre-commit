@@ -1,0 +1,21 @@
+#!/bin/sh
+# Pre-commit hook: fast checks only (< 10s)
+# Installed via: git config core.hooksPath .githooks
+
+set -e
+
+echo "pre-commit: fmt check..."
+cargo fmt --all --check || {
+    echo ""
+    echo "ERROR: Code is not formatted. Run 'cargo fmt --all' then re-stage."
+    exit 1
+}
+
+echo "pre-commit: clippy..."
+cargo clippy --all --tests -- -D warnings || {
+    echo ""
+    echo "ERROR: Clippy found issues. Fix them before committing."
+    exit 1
+}
+
+echo "pre-commit: OK"
