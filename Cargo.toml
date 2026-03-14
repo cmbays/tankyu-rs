@@ -25,6 +25,7 @@ insta              = "1"
 proptest           = "1"
 assert_cmd         = "2"
 tempfile           = "3"
+cucumber           = { version = "0.22", features = ["macros"] }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

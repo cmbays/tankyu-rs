@@ -29,3 +29,9 @@ comfy-table        = { workspace = true }
 assert_cmd = { workspace = true }
 insta      = { workspace = true }
 tempfile   = { workspace = true }
+cucumber   = { workspace = true }
+
+[[test]]
+name = "acceptance"
+path = "tests/acceptance/main.rs"
+harness = false
