@@ -96,7 +96,9 @@ mod tests {
     #[tokio::test]
     async fn test_get_by_name_found() {
         let t = make_topic("found");
-        let store = Arc::new(StubTopicStore { topics: vec![t.clone()] });
+        let store = Arc::new(StubTopicStore {
+            topics: vec![t.clone()],
+        });
         let mgr = TopicManager::new(store);
         let result = mgr.get_by_name("found").await.unwrap();
         assert_eq!(result.unwrap().name, "found");

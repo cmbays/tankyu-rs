@@ -28,7 +28,13 @@ async fn main() -> Result<()> {
             }
         },
         Commands::Entry { command } => match command {
-            EntryCommands::List { state, signal, source, topic, limit } => {
+            EntryCommands::List {
+                state,
+                signal,
+                source,
+                topic,
+                limit,
+            } => {
                 commands::entry::list(
                     &ctx,
                     state.as_deref(),

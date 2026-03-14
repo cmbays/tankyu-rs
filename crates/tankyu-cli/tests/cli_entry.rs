@@ -9,7 +9,11 @@ fn entry_list_plain() {
         .args(["entry", "list"])
         .output()
         .unwrap();
-    assert!(out.status.success(), "entry list failed: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "entry list failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     insta::assert_snapshot!(String::from_utf8(out.stdout).unwrap());
 }
 
@@ -34,7 +38,13 @@ fn entry_list_json() {
 fn entry_list_filtered_by_state() {
     let dir = create_fixture();
     // Add a second entry with different state
-    write_entry(&dir, "44444444-4444-4444-4444-444444444444", "A read entry", "read", None);
+    write_entry(
+        &dir,
+        "44444444-4444-4444-4444-444444444444",
+        "A read entry",
+        "read",
+        None,
+    );
     let out = cmd(&dir)
         .env("NO_COLOR", "1")
         .args(["entry", "list", "--state", "new"])
@@ -49,7 +59,13 @@ fn entry_list_filtered_by_state() {
 #[test]
 fn entry_list_filtered_by_signal() {
     let dir = create_fixture();
-    write_entry(&dir, "55555555-5555-5555-5555-555555555555", "Low signal entry", "new", Some("low"));
+    write_entry(
+        &dir,
+        "55555555-5555-5555-5555-555555555555",
+        "Low signal entry",
+        "new",
+        Some("low"),
+    );
     let out = cmd(&dir)
         .env("NO_COLOR", "1")
         .args(["entry", "list", "--signal", "high"])
@@ -69,9 +85,16 @@ fn entry_list_filtered_by_source() {
         .args(["entry", "list", "--source", "rust-lang/rust"])
         .output()
         .unwrap();
-    assert!(out.status.success(), "entry list --source failed: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "entry list --source failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     let stdout = String::from_utf8(out.stdout).unwrap();
-    assert!(stdout.contains("feat: add entry management"), "expected fixture entry in output: {stdout}");
+    assert!(
+        stdout.contains("feat: add entry management"),
+        "expected fixture entry in output: {stdout}"
+    );
     insta::assert_snapshot!(stdout);
 }
 
@@ -83,7 +106,11 @@ fn entry_inspect_plain() {
         .args(["entry", "inspect", ENTRY_ID])
         .output()
         .unwrap();
-    assert!(out.status.success(), "entry inspect failed: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "entry inspect failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     insta::assert_snapshot!(String::from_utf8(out.stdout).unwrap());
 }
 

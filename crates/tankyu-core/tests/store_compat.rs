@@ -10,7 +10,7 @@ use tankyu_core::{
     },
     infrastructure::{
         graph::JsonGraphStore,
-        stores::{EntryStore, EntityStore, InsightStore, SourceStore, TopicStore},
+        stores::{EntityStore, EntryStore, InsightStore, SourceStore, TopicStore},
     },
 };
 
@@ -23,10 +23,11 @@ fn fixtures_dir() -> PathBuf {
 #[tokio::test]
 async fn config_parses() {
     let path = fixtures_dir().join("config.json");
-    let bytes = tokio::fs::read(&path).await
+    let bytes = tokio::fs::read(&path)
+        .await
         .expect("fixtures/config.json must exist");
-    let config: TankyuConfig = serde_json::from_slice(&bytes)
-        .expect("config.json must parse as TankyuConfig");
+    let config: TankyuConfig =
+        serde_json::from_slice(&bytes).expect("config.json must parse as TankyuConfig");
     assert_eq!(config.version, 1);
     assert_eq!(config.stale_days, 7);
 }
@@ -63,14 +64,20 @@ async fn entry_fixture_parses() {
 #[tokio::test]
 async fn graph_fixture_parses() {
     let store = JsonGraphStore::new(fixtures_dir().join("graph").join("edges.json"));
-    let edges = store.list().await.expect("edges.json must parse without error");
+    let edges = store
+        .list()
+        .await
+        .expect("edges.json must parse without error");
     assert_eq!(edges.len(), 1, "expected 1 fixture edge");
 }
 
 #[tokio::test]
 async fn insight_fixture_parses() {
     let store = InsightStore::new(fixtures_dir().join("insights"));
-    let insights = store.list().await.expect("insights must list without error");
+    let insights = store
+        .list()
+        .await
+        .expect("insights must list without error");
     assert_eq!(insights.len(), 1, "expected 1 fixture insight");
     assert_eq!(insights[0].title, "Rust async patterns");
 }
@@ -78,7 +85,10 @@ async fn insight_fixture_parses() {
 #[tokio::test]
 async fn entity_fixture_parses() {
     let store = EntityStore::new(fixtures_dir().join("entities"));
-    let entities = store.list().await.expect("entities must list without error");
+    let entities = store
+        .list()
+        .await
+        .expect("entities must list without error");
     assert_eq!(entities.len(), 1, "expected 1 fixture entity");
     assert_eq!(entities[0].name, "Tokio");
 }

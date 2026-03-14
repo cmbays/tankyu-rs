@@ -132,11 +132,7 @@ mod tests {
                 .cloned()
                 .collect())
         }
-        async fn get_neighbors(
-            &self,
-            _id: Uuid,
-            _et: Option<EdgeType>,
-        ) -> Result<Vec<Edge>> {
+        async fn get_neighbors(&self, _id: Uuid, _et: Option<EdgeType>) -> Result<Vec<Edge>> {
             unimplemented!()
         }
         async fn query(&self, _opts: GraphQuery) -> Result<Vec<Edge>> {

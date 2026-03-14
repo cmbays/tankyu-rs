@@ -77,13 +77,7 @@ pub fn cmd(dir: &TempDir) -> Command {
 }
 
 /// Write an additional entry fixture to an existing fixture dir.
-pub fn write_entry(
-    dir: &TempDir,
-    id: &str,
-    title: &str,
-    state: &str,
-    signal: Option<&str>,
-) {
+pub fn write_entry(dir: &TempDir, id: &str, title: &str, state: &str, signal: Option<&str>) {
     write_json(
         dir.path().join(format!("entries/{id}.json")),
         &serde_json::json!({

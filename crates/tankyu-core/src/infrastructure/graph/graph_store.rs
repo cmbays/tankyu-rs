@@ -22,14 +22,18 @@ impl JsonGraphStore {
     /// Create a new `JsonGraphStore` backed by the file at `path`.
     #[must_use]
     pub fn new(path: PathBuf) -> Self {
-        Self { path, lock: Mutex::new(()) }
+        Self {
+            path,
+            lock: Mutex::new(()),
+        }
     }
 
     async fn read_index(&self) -> Result<GraphIndex> {
         match tokio::fs::read(&self.path).await {
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                Ok(GraphIndex { version: 1, edges: vec![] })
-            }
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(GraphIndex {
+                version: 1,
+                edges: vec![],
+            }),
             Err(e) => Err(e.into()),
             Ok(bytes) => Ok(serde_json::from_slice(&bytes)?),
         }
@@ -156,7 +160,10 @@ mod tests {
         let dir = tempdir().unwrap();
         let path = dir.path().join("edges.json");
         let edge = make_edge();
-        let index = crate::domain::types::GraphIndex { version: 1, edges: vec![edge.clone()] };
+        let index = crate::domain::types::GraphIndex {
+            version: 1,
+            edges: vec![edge.clone()],
+        };
         let json = serde_json::to_string(&index).unwrap();
         tokio::fs::write(&path, json).await.unwrap();
         let store = JsonGraphStore::new(path);

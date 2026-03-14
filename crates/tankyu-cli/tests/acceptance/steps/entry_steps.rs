@@ -72,7 +72,10 @@ async fn then_stdout_not_contains(world: &mut TankyuWorld, needle: String) {
 #[then(expr = "stderr contains {string}")]
 async fn then_stderr_contains(world: &mut TankyuWorld, needle: String) {
     assert!(
-        world.last_stderr.to_lowercase().contains(&needle.to_lowercase()),
+        world
+            .last_stderr
+            .to_lowercase()
+            .contains(&needle.to_lowercase()),
         "stderr did not contain {needle:?}\nstderr: {}",
         world.last_stderr
     );
@@ -80,8 +83,13 @@ async fn then_stderr_contains(world: &mut TankyuWorld, needle: String) {
 
 #[then(expr = "stdout is a JSON array of length {int}")]
 async fn then_json_array_length(world: &mut TankyuWorld, len: i64) {
-    let v: serde_json::Value = serde_json::from_str(&world.last_stdout)
-        .expect("stdout is not valid JSON");
+    let v: serde_json::Value =
+        serde_json::from_str(&world.last_stdout).expect("stdout is not valid JSON");
     let arr = v.as_array().expect("stdout is not a JSON array");
-    assert_eq!(arr.len(), len as usize, "expected {len} items, got {}", arr.len());
+    assert_eq!(
+        arr.len(),
+        len as usize,
+        "expected {len} items, got {}",
+        arr.len()
+    );
 }

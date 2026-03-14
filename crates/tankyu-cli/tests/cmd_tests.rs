@@ -26,13 +26,19 @@ fn topic_list_exits_success() {
 #[test]
 fn topic_inspect_found() {
     let dir = create_fixture();
-    cmd(&dir).args(["topic", "inspect", "rust"]).assert().success();
+    cmd(&dir)
+        .args(["topic", "inspect", "rust"])
+        .assert()
+        .success();
 }
 
 #[test]
 fn topic_inspect_missing_fails() {
     let dir = create_fixture();
-    cmd(&dir).args(["topic", "inspect", "nope"]).assert().failure();
+    cmd(&dir)
+        .args(["topic", "inspect", "nope"])
+        .assert()
+        .failure();
 }
 
 #[test]

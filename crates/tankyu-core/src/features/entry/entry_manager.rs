@@ -94,8 +94,7 @@ mod tests {
     use crate::domain::{
         ports::{IEntryStore, IGraphStore},
         types::{
-            Edge, EdgeType, Entry, EntryState, EntryType, EntryUpdate, GraphQuery, NodeType,
-            Signal,
+            Edge, EdgeType, Entry, EntryState, EntryType, EntryUpdate, GraphQuery, NodeType, Signal,
         },
     };
     use anyhow::Result;
@@ -160,11 +159,7 @@ mod tests {
                 .cloned()
                 .collect())
         }
-        async fn get_neighbors(
-            &self,
-            _id: Uuid,
-            _et: Option<EdgeType>,
-        ) -> Result<Vec<Edge>> {
+        async fn get_neighbors(&self, _id: Uuid, _et: Option<EdgeType>) -> Result<Vec<Edge>> {
             unimplemented!()
         }
         async fn query(&self, _opts: GraphQuery) -> Result<Vec<Edge>> {
@@ -300,7 +295,10 @@ mod tests {
         let mut entry_for_source = make_entry("For source", EntryState::New);
         entry_for_source.source_id = source_id;
         let store = Arc::new(StubEntryStore {
-            entries: vec![entry_for_source.clone(), make_entry("Other", EntryState::New)],
+            entries: vec![
+                entry_for_source.clone(),
+                make_entry("Other", EntryState::New),
+            ],
         });
         let graph = Arc::new(StubGraphStore { edges: vec![] });
         let mgr = EntryManager::new(store, graph);
