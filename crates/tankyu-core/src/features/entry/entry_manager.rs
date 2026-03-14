@@ -344,6 +344,89 @@ mod tests {
         assert!(result.is_empty());
     }
 
+    /// Kills the `&&` → `||` mutant on line 70: a non-Monitors edge FROM the topic
+    /// must NOT cause its `to_id` source to be included in results.
+    #[tokio::test]
+    async fn test_list_by_topic_ignores_non_monitors_edges() {
+        let topic_id = Uuid::new_v4();
+        let source_id = Uuid::new_v4();
+
+        // Edge FROM topic but with a non-Monitors edge type (Produced).
+        let non_monitors_edge = Edge {
+            id: Uuid::new_v4(),
+            from_id: topic_id,
+            from_type: NodeType::Topic,
+            to_id: source_id,
+            to_type: NodeType::Source,
+            edge_type: EdgeType::Produced, // not Monitors
+            reason: "test".to_string(),
+            score: None,
+            method: None,
+            created_at: Utc::now(),
+        };
+
+        let mut entry_for_source = make_entry("Should be excluded", EntryState::New);
+        entry_for_source.source_id = source_id;
+
+        let store = Arc::new(StubEntryStore {
+            entries: vec![entry_for_source],
+        });
+        let graph = Arc::new(StubGraphStore {
+            edges: vec![non_monitors_edge],
+        });
+        let mgr = EntryManager::new(store, graph);
+
+        let result = mgr.list_by_topic(topic_id).await.unwrap();
+        // With the correct `&&`, no Monitors edges exist → result is empty.
+        // With the mutated `||`, the Produced edge would match → result would have 1 entry.
+        assert!(
+            result.is_empty(),
+            "Non-Monitors edge must not cause entries to be returned"
+        );
+    }
+
+    /// Kills the `&&` → `||` mutant on line 70: a Monitors edge pointing TO the topic
+    /// (reverse direction) must NOT cause its `from_id` to be used as a source.
+    #[tokio::test]
+    async fn test_list_by_topic_ignores_incoming_monitors_edges() {
+        let topic_id = Uuid::new_v4();
+        let other_id = Uuid::new_v4(); // some other node that monitors the topic
+
+        // Edge from other_id TO topic_id (topic is the target, not origin).
+        let incoming_monitors_edge = Edge {
+            id: Uuid::new_v4(),
+            from_id: other_id,
+            from_type: NodeType::Source,
+            to_id: topic_id, // topic is the destination
+            to_type: NodeType::Topic,
+            edge_type: EdgeType::Monitors,
+            reason: "test".to_string(),
+            score: None,
+            method: None,
+            created_at: Utc::now(),
+        };
+
+        let mut entry_for_other = make_entry("Also excluded", EntryState::New);
+        entry_for_other.source_id = other_id;
+
+        let store = Arc::new(StubEntryStore {
+            entries: vec![entry_for_other],
+        });
+        let graph = Arc::new(StubGraphStore {
+            edges: vec![incoming_monitors_edge],
+        });
+        let mgr = EntryManager::new(store, graph);
+
+        let result = mgr.list_by_topic(topic_id).await.unwrap();
+        // With correct `&&`: from_id != topic_id, so no source_ids collected → empty.
+        // With mutated `||`: edge_type == Monitors satisfies ||, so other_id would
+        // be collected as a source_id → "Also excluded" would appear.
+        assert!(
+            result.is_empty(),
+            "Incoming Monitors edge (from_id != topic_id) must not cause entries to be returned"
+        );
+    }
+
     #[tokio::test]
     async fn test_get_returns_entry_by_id() {
         let entry = make_entry("Target", EntryState::New);
