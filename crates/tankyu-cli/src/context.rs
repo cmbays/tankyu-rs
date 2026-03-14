@@ -46,7 +46,7 @@ impl AppContext {
 
         Ok(Self {
             topic_mgr: TopicManager::new(topic_store),
-            source_mgr: SourceManager::new(source_store, graph_store),
+            source_mgr: SourceManager::new(source_store, Arc::clone(&graph_store)),
             entry_store,
             config,
             output: OutputMode::detect(json),
