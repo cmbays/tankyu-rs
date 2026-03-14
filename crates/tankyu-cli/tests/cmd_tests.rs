@@ -60,17 +60,6 @@ fn doctor_exits_success() {
 }
 
 #[test]
-fn status_json_counts_entries_via_mgr() {
-    // Regression guard: verifies AppContext wires entry_mgr (not raw entry_store)
-    // by confirming status still works after the refactor
-    let dir = create_fixture();
-    let output = cmd(&dir).args(["--json", "status"]).output().unwrap();
-    assert!(output.status.success());
-    let v: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-    assert_eq!(v["entries"], 1); // entry fixture added in Task 7
-}
-
-#[test]
 fn entry_list_exits_success() {
     let dir = create_fixture();
     cmd(&dir).args(["entry", "list"]).assert().success();

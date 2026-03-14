@@ -21,6 +21,7 @@ pub struct TankyuWorld {
 }
 
 impl TankyuWorld {
+    #[allow(clippy::unused_async)]
     async fn new() -> Self {
         let dir = TempDir::new().unwrap();
         let b = dir.path();

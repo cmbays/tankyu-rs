@@ -120,14 +120,14 @@ pub async fn list(
     let mut table = comfy_table::Table::new();
     table.set_header(["ID", "Type", "State", "Signal", "Title", "Scanned"]);
     for e in &entries {
-        let id_short = &e.id.to_string()[..8];
+        let id_full = e.id.to_string();
         let title: String = if e.title.chars().count() > 60 {
             format!("{}…", e.title.chars().take(59).collect::<String>())
         } else {
             e.title.clone()
         };
         table.add_row([
-            id_short,
+            &id_full,
             type_str(&e.r#type),
             state_str(&e.state),
             signal_str(e.signal.as_ref()),

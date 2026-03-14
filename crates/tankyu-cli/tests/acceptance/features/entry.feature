@@ -35,6 +35,7 @@ Feature: Entry management
   Scenario: No entries shows empty table
     When I run "entry list"
     Then the command exits successfully
+    And stdout does not contain "feat:"
 
   Scenario: Inspect a non-existent entry fails
     When I run "entry inspect 00000000-0000-0000-0000-000000000000"
