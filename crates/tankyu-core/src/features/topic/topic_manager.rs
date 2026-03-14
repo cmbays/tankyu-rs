@@ -20,7 +20,7 @@ impl TopicManager {
     ///
     /// # Errors
     /// Returns an error if the store fails.
-    pub async fn list(&self) -> Result<Vec<Topic>> {
+    pub async fn list_all(&self) -> Result<Vec<Topic>> {
         self.store.list().await
     }
 
@@ -90,7 +90,7 @@ mod tests {
             topics: vec![make_topic("alpha"), make_topic("beta")],
         });
         let mgr = TopicManager::new(store);
-        assert_eq!(mgr.list().await.unwrap().len(), 2);
+        assert_eq!(mgr.list_all().await.unwrap().len(), 2);
     }
 
     #[tokio::test]
