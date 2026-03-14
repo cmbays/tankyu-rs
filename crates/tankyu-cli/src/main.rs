@@ -9,7 +9,7 @@ mod context;
 mod error;
 mod output;
 
-use cli::{Cli, Commands, ConfigCommands, SourceCommands, TopicCommands};
+use cli::{Cli, Commands, ConfigCommands, EntryCommands, SourceCommands, TopicCommands};
 use context::AppContext;
 
 #[tokio::main]
@@ -26,6 +26,20 @@ async fn main() -> Result<()> {
             SourceCommands::List { topic, role } => {
                 commands::source::list(&ctx, topic.as_deref(), role.as_deref()).await
             }
+        },
+        Commands::Entry { command } => match command {
+            EntryCommands::List { state, signal, source, topic, limit } => {
+                commands::entry::list(
+                    &ctx,
+                    state.as_deref(),
+                    signal.as_deref(),
+                    source.as_deref(),
+                    topic.as_deref(),
+                    limit,
+                )
+                .await
+            }
+            EntryCommands::Inspect { id } => commands::entry::inspect(&ctx, &id).await,
         },
         Commands::Config { command } => match command {
             ConfigCommands::Show => commands::config::show(&ctx),
