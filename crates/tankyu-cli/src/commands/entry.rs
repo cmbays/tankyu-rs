@@ -76,6 +76,10 @@ pub async fn list(
         anyhow::bail!("--topic and --source are mutually exclusive");
     }
 
+    // Validate filters before any I/O so invalid args fail fast.
+    let state_filter = state.map(parse_state).transpose()?;
+    let signal_filter = signal.map(parse_signal).transpose()?;
+
     let mut entries = match (source, topic) {
         (Some(name), None) => {
             let src = ctx
@@ -93,16 +97,15 @@ pub async fn list(
                 .ok_or_else(|| anyhow::anyhow!("Topic '{name}' not found"))?;
             ctx.entry_mgr.list_by_topic(t.id).await?
         }
-        _ => ctx.entry_mgr.list_all().await?,
+        (None, None) => ctx.entry_mgr.list_all().await?,
+        (Some(_), Some(_)) => unreachable!("mutually exclusive guard above"),
     };
 
-    if let Some(s) = state {
-        let filter = parse_state(s)?;
+    if let Some(filter) = state_filter {
         entries.retain(|e| e.state == filter);
     }
 
-    if let Some(s) = signal {
-        let filter = parse_signal(s)?;
+    if let Some(filter) = signal_filter {
         entries.retain(|e| e.signal.as_ref() == Some(&filter));
     }
 
@@ -120,14 +123,14 @@ pub async fn list(
     let mut table = comfy_table::Table::new();
     table.set_header(["ID", "Type", "State", "Signal", "Title", "Scanned"]);
     for e in &entries {
-        let id_full = e.id.to_string();
+        let id_str = e.id.to_string();
         let title: String = if e.title.chars().count() > 60 {
             format!("{}…", e.title.chars().take(59).collect::<String>())
         } else {
             e.title.clone()
         };
         table.add_row([
-            &id_full,
+            &id_str,
             type_str(&e.r#type),
             state_str(&e.state),
             signal_str(e.signal.as_ref()),

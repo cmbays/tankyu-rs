@@ -1,8 +1,12 @@
+// cucumber step macros require `&mut World` even for read-only steps, and
+// `String` captures by value — suppress the resulting pedantic lints globally.
+#![allow(clippy::needless_pass_by_ref_mut)]
+#![allow(clippy::needless_pass_by_value)]
+
 use crate::world::TankyuWorld;
 use cucumber::{given, then, when};
 
 #[given("the data directory contains 3 entries with mixed state")]
-#[allow(clippy::needless_pass_by_ref_mut)]
 fn given_three_entries(world: &mut TankyuWorld) {
     world.write_entry(
         "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
@@ -25,14 +29,12 @@ fn given_three_entries(world: &mut TankyuWorld) {
 }
 
 #[when(expr = "I run {string}")]
-#[allow(clippy::needless_pass_by_value)]
 fn when_run(world: &mut TankyuWorld, cmd_str: String) {
     let parts: Vec<&str> = cmd_str.split_whitespace().collect();
     world.run_cmd(&parts);
 }
 
 #[then("the command exits successfully")]
-#[allow(clippy::needless_pass_by_ref_mut)]
 fn then_exits_success(world: &mut TankyuWorld) {
     assert_eq!(
         world.last_exit_code,
@@ -45,7 +47,6 @@ fn then_exits_success(world: &mut TankyuWorld) {
 }
 
 #[then("the command exits with failure")]
-#[allow(clippy::needless_pass_by_ref_mut)]
 fn then_exits_failure(world: &mut TankyuWorld) {
     assert_ne!(
         world.last_exit_code,
@@ -56,8 +57,6 @@ fn then_exits_failure(world: &mut TankyuWorld) {
 }
 
 #[then(expr = "stdout contains {string}")]
-#[allow(clippy::needless_pass_by_ref_mut)]
-#[allow(clippy::needless_pass_by_value)]
 fn then_stdout_contains(world: &mut TankyuWorld, needle: String) {
     assert!(
         world.last_stdout.contains(&needle),
@@ -67,8 +66,6 @@ fn then_stdout_contains(world: &mut TankyuWorld, needle: String) {
 }
 
 #[then(expr = "stdout does not contain {string}")]
-#[allow(clippy::needless_pass_by_ref_mut)]
-#[allow(clippy::needless_pass_by_value)]
 fn then_stdout_not_contains(world: &mut TankyuWorld, needle: String) {
     assert!(
         !world.last_stdout.contains(&needle),
@@ -78,8 +75,6 @@ fn then_stdout_not_contains(world: &mut TankyuWorld, needle: String) {
 }
 
 #[then(expr = "stderr contains {string}")]
-#[allow(clippy::needless_pass_by_ref_mut)]
-#[allow(clippy::needless_pass_by_value)]
 fn then_stderr_contains(world: &mut TankyuWorld, needle: String) {
     assert!(
         world
@@ -92,7 +87,6 @@ fn then_stderr_contains(world: &mut TankyuWorld, needle: String) {
 }
 
 #[then(expr = "stdout is a JSON array of length {int}")]
-#[allow(clippy::needless_pass_by_ref_mut)]
 fn then_json_array_length(world: &mut TankyuWorld, len: i64) {
     let v: serde_json::Value =
         serde_json::from_str(&world.last_stdout).expect("stdout is not valid JSON");
