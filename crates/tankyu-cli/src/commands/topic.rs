@@ -3,7 +3,7 @@ use anyhow::Result;
 use crate::context::AppContext;
 
 pub async fn list(ctx: &AppContext) -> Result<()> {
-    let topics = ctx.topic_mgr.list().await?;
+    let topics = ctx.topic_mgr.list_all().await?;
     if ctx.output.is_json() {
         println!("{}", serde_json::to_string(&topics)?);
         return Ok(());

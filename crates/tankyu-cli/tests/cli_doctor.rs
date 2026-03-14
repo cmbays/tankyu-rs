@@ -4,7 +4,11 @@ use common::{cmd, create_fixture};
 #[test]
 fn doctor_plain() {
     let dir = create_fixture();
-    let out = cmd(&dir).env("NO_COLOR", "1").arg("doctor").output().unwrap();
+    let out = cmd(&dir)
+        .env("NO_COLOR", "1")
+        .arg("doctor")
+        .output()
+        .unwrap();
     // Snapshot only stdout (data_dir path is dynamic — strip it)
     let stdout = String::from_utf8(out.stdout).unwrap();
     let stable = stdout

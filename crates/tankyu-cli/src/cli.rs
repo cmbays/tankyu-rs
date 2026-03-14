@@ -29,6 +29,11 @@ pub enum Commands {
         #[command(subcommand)]
         command: SourceCommands,
     },
+    /// Entry management
+    Entry {
+        #[command(subcommand)]
+        command: EntryCommands,
+    },
     /// Configuration
     Config {
         #[command(subcommand)]
@@ -56,6 +61,33 @@ pub enum SourceCommands {
         /// Filter by role: starred, role-model, reference
         #[arg(long)]
         role: Option<String>,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum EntryCommands {
+    /// List entries, optionally filtered by state, signal, source, or topic
+    List {
+        /// Filter by state: new, scanned, triaged, read, archived
+        #[arg(long)]
+        state: Option<String>,
+        /// Filter by signal: high, medium, low, noise
+        #[arg(long)]
+        signal: Option<String>,
+        /// Filter by source name
+        #[arg(long)]
+        source: Option<String>,
+        /// Filter by topic name (resolves to sources monitored by that topic)
+        #[arg(long)]
+        topic: Option<String>,
+        /// Limit number of results (applied after all filters)
+        #[arg(long)]
+        limit: Option<usize>,
+    },
+    /// Inspect a single entry by UUID
+    Inspect {
+        /// Entry UUID
+        id: String,
     },
 }
 

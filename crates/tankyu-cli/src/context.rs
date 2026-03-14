@@ -3,10 +3,10 @@ use std::{path::PathBuf, sync::Arc};
 use anyhow::{Context, Result};
 use tankyu_core::{
     domain::{
-        ports::{IGraphStore, ISourceStore, ITopicStore},
+        ports::{IEntryStore, IGraphStore, ISourceStore, ITopicStore},
         types::TankyuConfig,
     },
-    features::{source::SourceManager, topic::TopicManager},
+    features::{entry::EntryManager, source::SourceManager, topic::TopicManager},
     infrastructure::{
         graph::JsonGraphStore,
         stores::{EntryStore, SourceStore, TopicStore},
@@ -19,7 +19,7 @@ use crate::output::OutputMode;
 pub struct AppContext {
     pub topic_mgr: TopicManager,
     pub source_mgr: SourceManager,
-    pub entry_store: Arc<EntryStore>,
+    pub entry_mgr: EntryManager,
     pub config: TankyuConfig,
     pub output: OutputMode,
     pub data_dir: PathBuf,
@@ -42,12 +42,13 @@ impl AppContext {
             Arc::new(SourceStore::new(constants::sources_dir(&base)));
         let graph_store: Arc<dyn IGraphStore> =
             Arc::new(JsonGraphStore::new(constants::edges_path(&base)));
-        let entry_store = Arc::new(EntryStore::new(constants::entries_dir(&base)));
+        let entry_store: Arc<dyn IEntryStore> =
+            Arc::new(EntryStore::new(constants::entries_dir(&base)));
 
         Ok(Self {
             topic_mgr: TopicManager::new(topic_store),
-            source_mgr: SourceManager::new(source_store, graph_store),
-            entry_store,
+            source_mgr: SourceManager::new(source_store, Arc::clone(&graph_store)),
+            entry_mgr: EntryManager::new(entry_store, graph_store),
             config,
             output: OutputMode::detect(json),
             data_dir: base,

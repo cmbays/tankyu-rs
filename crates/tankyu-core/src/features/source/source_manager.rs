@@ -41,6 +41,18 @@ impl SourceManager {
             .collect())
     }
 
+    /// Find a source by its name (case-sensitive, first match).
+    ///
+    /// Returns `None` if no source with that name exists.
+    /// Note: name uniqueness is not enforced; this returns the first match.
+    ///
+    /// # Errors
+    /// Returns an error if the store fails.
+    pub async fn get_by_name(&self, name: &str) -> Result<Option<Source>> {
+        let all = self.store.list().await?;
+        Ok(all.into_iter().find(|s| s.name == name))
+    }
+
     /// List sources monitored by a topic (via `Monitors` edges in the graph).
     ///
     /// # Errors
@@ -120,11 +132,7 @@ mod tests {
                 .cloned()
                 .collect())
         }
-        async fn get_neighbors(
-            &self,
-            _id: Uuid,
-            _et: Option<EdgeType>,
-        ) -> Result<Vec<Edge>> {
+        async fn get_neighbors(&self, _id: Uuid, _et: Option<EdgeType>) -> Result<Vec<Edge>> {
             unimplemented!()
         }
         async fn query(&self, _opts: GraphQuery) -> Result<Vec<Edge>> {
@@ -209,5 +217,28 @@ mod tests {
         let result = mgr.list_by_topic(topic_id).await.unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].id, s1_id);
+    }
+
+    #[tokio::test]
+    async fn test_get_by_name_found() {
+        let target_id = Uuid::new_v4();
+        let mut target = make_source(target_id, None);
+        target.name = "rust-lang/rust".to_string();
+        let store = Arc::new(StubSourceStore {
+            sources: vec![target, make_source(Uuid::new_v4(), None)],
+        });
+        let graph = Arc::new(StubGraphStore { edges: vec![] });
+        let mgr = SourceManager::new(store, graph);
+        let result = mgr.get_by_name("rust-lang/rust").await.unwrap();
+        assert_eq!(result.unwrap().id, target_id);
+    }
+
+    #[tokio::test]
+    async fn test_get_by_name_not_found() {
+        let store = Arc::new(StubSourceStore { sources: vec![] });
+        let graph = Arc::new(StubGraphStore { edges: vec![] });
+        let mgr = SourceManager::new(store, graph);
+        let result = mgr.get_by_name("nonexistent").await.unwrap();
+        assert!(result.is_none());
     }
 }

@@ -2,3 +2,6 @@
 .DS_Store
 .env
 *.tmp
+.worktrees/
+mutants.out/
+mutants.out.old/

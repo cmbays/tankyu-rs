@@ -1,5 +1,4 @@
 use anyhow::Result;
-use tankyu_core::domain::ports::IEntryStore;
 
 use crate::context::AppContext;
 
@@ -18,7 +17,7 @@ pub async fn run(ctx: &AppContext) -> Result<()> {
             ctx.config.version
         ));
     }
-    let entry_count = ctx.entry_store.list().await?.len();
+    let entry_count = ctx.entry_mgr.list_all().await?.len();
 
     if ctx.output.is_json() {
         println!(
