@@ -19,7 +19,7 @@ monitoring services as tankyu grows toward an autonomous research graph.
 
 ## Scope
 
-Seven deliverables in priority order:
+Eight deliverables in priority order:
 
 1. `source inspect <name>` — full source detail
 2. `health` — config-driven source health report (stale / dormant / empty)
@@ -129,9 +129,11 @@ pub async fn remove(&self, name: &str) -> Result<Source>
 ```
 
 **`add` logic:**
-1. `store.get_by_url(&input.url)` — if exists: optionally update role if it
-   differs, optionally add `Monitors` edge if `topic_id` provided and edge
-   absent, return existing source (fully idempotent)
+1. `store.get_by_url(&input.url)` — if exists:
+   - If `input.role` is `Some(r)` and `existing.role != Some(r)`:
+     call `store.update(id, SourceUpdate { role: Some(r), .. })` to update role
+   - If `topic_id` provided: check for existing `Monitors` edge (dedup), add if absent
+   - Return (possibly-updated) existing source (fully idempotent)
 2. If new: apply `input.source_type` or `detect_source_type()`, apply
    `input.name` or `name_from_url()`, build `Source` with fresh UUID,
    `state: Active`, zero counters, `Utc::now()` for `created_at`
@@ -210,11 +212,16 @@ impl HealthManager {
 1. Load all sources; load all entries
 2. Build `HashSet<Uuid>` of source IDs that have at least one entry
 3. For each source where `state != Pruned`:
-   - Compute `age_days` = days since `last_checked_at` (or ∞ if never checked)
-   - If `age_days > dormant_days` → `Dormant` warning
-   - Else if `age_days > stale_days` → `Stale` warning
-   - If source ID not in entries set → `Empty` warning
+   - If `last_checked_at IS NULL` → `Stale` warning (detail: "never checked")
+   - Else compute `age_days` = days since `last_checked_at`:
+     - If `age_days > dormant_days` → `Dormant` warning
+     - Else if `age_days > stale_days` → `Stale` warning
+   - If source ID not in entries set → `Empty` warning (independent of above)
 4. Return `HealthReport { ok: warnings.is_empty(), warnings, checked_at: Utc::now() }`
+
+Note: A source can have both a staleness warning and an `Empty` warning simultaneously.
+Never-checked sources emit `Stale` (not `Dormant`) — we treat absence of data as
+stale, not dormant, matching TS behavior. Dormant requires confirmed inactivity over time.
 
 `HealthThresholds` is constructed in `AppContext` from `config.stale_days` and
 `config.dormant_days`. Config never enters core.
@@ -224,6 +231,7 @@ impl HealthManager {
 ```rust
 #[error("duplicate {kind}: '{name}' already exists")]
 Duplicate { kind: String, name: String },
+// Usage: TankyuError::Duplicate { kind: "topic".into(), name: topic_name }
 ```
 
 Used by `TopicManager::create()`. `SourceManager::add()` is idempotent (returns
@@ -343,7 +351,7 @@ pub graph_store: Arc<dyn IGraphStore>,  // exposed for --unclassified query
 - Source with entries → no `Empty`
 - Source with zero entries → `Empty`
 - Pruned source → skipped entirely
-- Never-checked source → `Stale`
+- Never-checked source → `Stale` (explicit NULL check, not age comparison)
 - `ok: true` iff no warnings
 - `ok: false` iff any warnings
 
@@ -376,6 +384,7 @@ All sources healthy exits 0
 Stale source produces warning and exits 1
 Dormant source produces warning and exits 1
 Empty source produces warning and exits 1
+Never-checked source produces stale warning and exits 1
 Pruned source is ignored by health check
 Health report as JSON
 ```
@@ -444,6 +453,11 @@ for future nanograph integration.
 TS takes an ID. The issue spec says `<name>`. Name is the ergonomic CLI
 interface; UUID lookup is an implementation detail. This is consistent with all
 other by-name lookups in the CLI (`topic inspect`, `source list --topic`, etc.).
+
+Unlike `entry update <id>`, which explicitly uses UUID: entries are not
+user-named (their titles are not stable identifiers), so UUID is the only
+reliable handle. Sources, by contrast, are routinely referred to by name in CLI
+workflows and the name is the natural identifier from the user's perspective.
 
 ### ADR-5: `graph_store` exposed on `AppContext`
 
