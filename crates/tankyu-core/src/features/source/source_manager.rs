@@ -9,6 +9,7 @@ use crate::domain::{
     types::{Edge, EdgeType, NodeType, Source, SourceRole, SourceState, SourceType, SourceUpdate},
 };
 use crate::features::source::url_detect::{detect_source_type, name_from_url};
+use crate::shared::error::TankyuError;
 
 /// Input for adding a new source.
 pub struct AddSourceInput {
@@ -152,6 +153,26 @@ impl SourceManager {
         Ok(source)
     }
 
+    /// Mark a source as pruned by name. Returns the updated source.
+    ///
+    /// # Errors
+    /// Returns `TankyuError::NotFound` if no source with this name exists.
+    pub async fn remove(&self, name: &str) -> Result<Source> {
+        let source = self
+            .get_by_name(name)
+            .await?
+            .ok_or_else(|| TankyuError::NotFound(format!("source '{name}'")))?;
+        self.store
+            .update(
+                source.id,
+                SourceUpdate {
+                    state: Some(SourceState::Pruned),
+                    ..Default::default()
+                },
+            )
+            .await
+    }
+
     /// Create a `Monitors` edge from `topic_id` → `source_id` unless one already exists.
     async fn ensure_monitors_edge(&self, source_id: Uuid, topic_id: Uuid) -> Result<()> {
         // Query by source_id: get_edges_by_node returns all edges where from_id or to_id
@@ -252,6 +273,9 @@ mod tests {
                 .expect("source not found in stub");
             if let Some(role) = u.role {
                 source.role = Some(role);
+            }
+            if let Some(state) = u.state {
+                source.state = state;
             }
             Ok(source.clone())
         }
@@ -575,5 +599,30 @@ mod tests {
             1,
             "dedup guard should prevent a second Monitors edge"
         );
+    }
+
+    // ── remove() tests ─────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_remove_sets_state_to_pruned() {
+        let id = Uuid::new_v4();
+        let mut source = make_source(id, None);
+        source.name = "to-remove".to_string();
+        let store = Arc::new(StubSourceStore::with_sources(vec![source.clone()]));
+        let graph = Arc::new(StubGraphStore { edges: vec![] });
+        let mgr = SourceManager::new(store, graph);
+        let result = mgr.remove("to-remove").await.unwrap();
+        assert!(matches!(result.state, SourceState::Pruned));
+    }
+
+    #[tokio::test]
+    async fn test_remove_unknown_name_returns_not_found() {
+        use crate::shared::error::TankyuError;
+        let store = Arc::new(StubSourceStore::empty());
+        let graph = Arc::new(StubGraphStore { edges: vec![] });
+        let mgr = SourceManager::new(store, graph);
+        let err = mgr.remove("nonexistent").await.unwrap_err();
+        let tankyu_err = err.downcast::<TankyuError>().unwrap();
+        assert!(matches!(tankyu_err, TankyuError::NotFound(_)));
     }
 }
