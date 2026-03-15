@@ -1,0 +1,6 @@
+---
+source: crates/tankyu-cli/tests/cli_entry.rs
+expression: "String::from_utf8(out.stdout).unwrap()"
+---
+Updated entry: feat: add entry management
+  State: read

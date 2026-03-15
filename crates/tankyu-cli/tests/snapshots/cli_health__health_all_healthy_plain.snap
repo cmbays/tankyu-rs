@@ -1,0 +1,5 @@
+---
+source: crates/tankyu-cli/tests/cli_health.rs
+expression: "String::from_utf8(out.stdout).unwrap()"
+---
+All sources healthy

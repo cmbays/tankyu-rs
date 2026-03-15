@@ -30,6 +30,7 @@ assert_cmd = { workspace = true }
 insta      = { workspace = true }
 tempfile   = { workspace = true }
 cucumber   = { workspace = true }
+chrono     = { workspace = true }
 
 [[test]]
 name = "acceptance"

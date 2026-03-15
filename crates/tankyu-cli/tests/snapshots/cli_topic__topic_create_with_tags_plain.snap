@@ -1,0 +1,6 @@
+---
+source: crates/tankyu-cli/tests/cli_topic.rs
+expression: stable
+---
+Created topic: Systems
+  Tags: rust, c, cpp
