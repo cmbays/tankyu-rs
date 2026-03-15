@@ -78,4 +78,100 @@ impl TankyuWorld {
             }),
         );
     }
+
+    pub fn write_source(
+        &self,
+        id: &str,
+        name: &str,
+        url: &str,
+        state: &str,
+        last_checked_days_ago: Option<i64>,
+    ) {
+        use chrono::{Duration, Utc};
+        let last_checked = last_checked_days_ago
+            .map(|d| (Utc::now() - Duration::days(d)).to_rfc3339())
+            .map(serde_json::Value::String)
+            .unwrap_or(serde_json::Value::Null);
+        write_json(
+            self.data_dir.path().join(format!("sources/{id}.json")),
+            &serde_json::json!({
+                "id": id,
+                "type": "github-repo",
+                "name": name,
+                "url": url,
+                "state": state,
+                "config": null,
+                "pollIntervalMinutes": null,
+                "discoveredVia": null,
+                "discoveryReason": null,
+                "lastCheckedAt": last_checked,
+                "lastNewContentAt": null,
+                "checkCount": 0,
+                "hitCount": 0,
+                "missCount": 0,
+                "createdAt": "2025-01-01T00:00:00Z"
+            }),
+        );
+    }
+
+    pub fn write_topic(&self, id: &str, name: &str) {
+        write_json(
+            self.data_dir.path().join(format!("topics/{id}.json")),
+            &serde_json::json!({
+                "id": id,
+                "name": name,
+                "description": "",
+                "tags": [],
+                "projects": [],
+                "createdAt": "2025-01-01T00:00:00Z",
+                "updatedAt": "2025-01-01T00:00:00Z",
+                "lastScannedAt": null,
+                "scanCount": 0
+            }),
+        );
+    }
+
+    pub fn write_tagged_with_edge(&self, entry_id: &str, topic_id: &str) {
+        use uuid::Uuid;
+        let edge_id = Uuid::new_v4().to_string();
+        let edges_path = self.data_dir.path().join("graph/edges.json");
+        let current: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&edges_path).unwrap()).unwrap();
+        let mut edges = current["edges"].as_array().cloned().unwrap_or_default();
+        edges.push(serde_json::json!({
+            "id": edge_id,
+            "fromId": entry_id,
+            "fromType": "entry",
+            "toId": topic_id,
+            "toType": "topic",
+            "edgeType": "tagged-with",
+            "reason": "test classification",
+            "createdAt": "2025-01-01T00:00:00Z"
+        }));
+        write_json(
+            &edges_path,
+            &serde_json::json!({ "version": 1, "edges": edges }),
+        );
+    }
+
+    pub fn write_entry_for_source(&self, source_id: &str) {
+        let id = uuid::Uuid::new_v4().to_string();
+        write_json(
+            self.data_dir.path().join(format!("entries/{id}.json")),
+            &serde_json::json!({
+                "id": id,
+                "sourceId": source_id,
+                "type": "article",
+                "title": "test entry",
+                "url": format!("https://example.com/{id}"),
+                "summary": null,
+                "contentHash": null,
+                "state": "new",
+                "signal": null,
+                "scannedAt": "2025-01-15T10:00:00Z",
+                "metadata": null,
+                "createdAt": "2025-01-15T10:00:00Z"
+            }),
+        );
+    }
 }
