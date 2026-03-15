@@ -91,8 +91,7 @@ impl HealthManager {
                     });
                 }
                 Some(last_checked) => {
-                    let age_days =
-                        u32::try_from((now - last_checked).num_days()).unwrap_or(0);
+                    let age_days = u32::try_from((now - last_checked).num_days()).unwrap_or(0);
                     if age_days > thresholds.dormant_days {
                         warnings.push(HealthWarning {
                             source_id: source.id,
