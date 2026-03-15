@@ -1,0 +1,14 @@
+---
+source: crates/tankyu-cli/tests/cli_source.rs
+expression: "String::from_utf8(out.stdout).unwrap()"
+---
+Name:         rust-lang/rust
+Type:         github-repo
+State:        active
+Role:         —
+URL:          https://github.com/rust-lang/rust
+Check count:  0
+Hit count:    0
+Miss count:   0
+Last checked: never
+Created:      2025-01-01

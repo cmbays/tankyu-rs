@@ -12,6 +12,7 @@ use tankyu_core::{
         stores::{EntryStore, SourceStore, TopicStore},
     },
     shared::constants,
+    HealthManager,
 };
 
 use crate::output::OutputMode;
@@ -20,6 +21,8 @@ pub struct AppContext {
     pub topic_mgr: TopicManager,
     pub source_mgr: SourceManager,
     pub entry_mgr: EntryManager,
+    pub health_mgr: HealthManager,
+    pub graph_store: Arc<dyn IGraphStore>,
     pub config: TankyuConfig,
     pub output: OutputMode,
     pub data_dir: PathBuf,
@@ -45,10 +48,15 @@ impl AppContext {
         let entry_store: Arc<dyn IEntryStore> =
             Arc::new(EntryStore::new(constants::entries_dir(&base)));
 
+        let health_source_store = Arc::clone(&source_store);
+        let health_entry_store = Arc::clone(&entry_store);
+
         Ok(Self {
             topic_mgr: TopicManager::new(topic_store),
             source_mgr: SourceManager::new(source_store, Arc::clone(&graph_store)),
-            entry_mgr: EntryManager::new(entry_store, graph_store),
+            entry_mgr: EntryManager::new(entry_store, Arc::clone(&graph_store)),
+            health_mgr: HealthManager::new(health_source_store, health_entry_store),
+            graph_store: Arc::clone(&graph_store),
             config,
             output: OutputMode::detect(json),
             data_dir: base,

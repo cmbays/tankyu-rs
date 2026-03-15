@@ -5,3 +5,4 @@
 .worktrees/
 mutants.out/
 mutants.out.old/
+docs/private/

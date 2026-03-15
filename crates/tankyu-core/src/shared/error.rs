@@ -13,6 +13,9 @@ pub enum TankyuError {
     #[error("scan error: {0}")]
     Scan(String),
 
+    #[error("duplicate {kind}: '{name}' already exists")]
+    Duplicate { kind: String, name: String },
+
     #[error("io error: {0}")]
     Io(Box<std::io::Error>),
 
@@ -54,5 +57,14 @@ mod tests {
         let json_err = serde_json::from_str::<serde_json::Value>("not json").unwrap_err();
         let err: TankyuError = json_err.into();
         assert!(matches!(err, TankyuError::Json(_)));
+    }
+
+    #[test]
+    fn duplicate_displays_message() {
+        let err = TankyuError::Duplicate {
+            kind: "topic".to_string(),
+            name: "Rust".to_string(),
+        };
+        assert_eq!(err.to_string(), "duplicate topic: 'Rust' already exists");
     }
 }

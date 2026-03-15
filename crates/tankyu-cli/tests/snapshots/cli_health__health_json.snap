@@ -1,0 +1,9 @@
+---
+source: crates/tankyu-cli/tests/cli_health.rs
+expression: "serde_json::to_string_pretty(&stable).unwrap()"
+---
+{
+  "checkedAt": "<dynamic>",
+  "ok": true,
+  "warnings": []
+}

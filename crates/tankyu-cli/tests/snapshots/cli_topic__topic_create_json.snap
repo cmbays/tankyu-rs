@@ -1,0 +1,5 @@
+---
+source: crates/tankyu-cli/tests/cli_topic.rs
+expression: "format!(\"name={} tags=[] scanCount=0\", v[\"name\"])"
+---
+name="JSON-Topic" tags=[] scanCount=0

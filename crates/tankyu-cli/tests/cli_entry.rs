@@ -2,6 +2,43 @@ mod common;
 use common::{cmd, create_fixture, write_entry, ENTRY_ID};
 
 #[test]
+fn entry_update_plain() {
+    let dir = create_fixture();
+    let out = cmd(&dir)
+        .env("NO_COLOR", "1")
+        .args(["entry", "update", ENTRY_ID, "--state", "read"])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "entry update failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    insta::assert_snapshot!(String::from_utf8(out.stdout).unwrap());
+}
+
+#[test]
+fn entry_list_unclassified_plain() {
+    let dir = create_fixture();
+    let out = cmd(&dir)
+        .env("NO_COLOR", "1")
+        .args(["entry", "list", "--unclassified"])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "entry list --unclassified failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert!(
+        stdout.contains("feat: add entry management"),
+        "fixture entry must be unclassified: {stdout}"
+    );
+    insta::assert_snapshot!(stdout);
+}
+
+#[test]
 fn entry_list_plain() {
     let dir = create_fixture();
     let out = cmd(&dir)

@@ -71,7 +71,11 @@ pub async fn list(
     source: Option<&str>,
     topic: Option<&str>,
     limit: Option<usize>,
+    unclassified: bool,
 ) -> Result<()> {
+    if unclassified && (source.is_some() || topic.is_some()) {
+        anyhow::bail!("--unclassified is mutually exclusive with --topic and --source");
+    }
     if source.is_some() && topic.is_some() {
         anyhow::bail!("--topic and --source are mutually exclusive");
     }
@@ -80,25 +84,44 @@ pub async fn list(
     let state_filter = state.map(parse_state).transpose()?;
     let signal_filter = signal.map(parse_signal).transpose()?;
 
-    let mut entries = match (source, topic) {
-        (Some(name), None) => {
-            let src = ctx
-                .source_mgr
-                .get_by_name(name)
-                .await?
-                .ok_or_else(|| anyhow::anyhow!("Source '{name}' not found"))?;
-            ctx.entry_mgr.list_by_source(src.id).await?
+    let mut entries = if unclassified {
+        use tankyu_core::domain::types::{EdgeType, GraphQuery, NodeType};
+        let classified_ids: std::collections::HashSet<_> = ctx
+            .graph_store
+            .query(GraphQuery {
+                edge_type: Some(EdgeType::TaggedWith),
+                from_type: Some(NodeType::Entry),
+                ..Default::default()
+            })
+            .await?
+            .into_iter()
+            .map(|e| e.from_id)
+            .collect();
+        let all = ctx.entry_mgr.list_all().await?;
+        all.into_iter()
+            .filter(|e| !classified_ids.contains(&e.id))
+            .collect::<Vec<_>>()
+    } else {
+        match (source, topic) {
+            (Some(name), None) => {
+                let src = ctx
+                    .source_mgr
+                    .get_by_name(name)
+                    .await?
+                    .ok_or_else(|| anyhow::anyhow!("Source '{name}' not found"))?;
+                ctx.entry_mgr.list_by_source(src.id).await?
+            }
+            (None, Some(name)) => {
+                let t = ctx
+                    .topic_mgr
+                    .get_by_name(name)
+                    .await?
+                    .ok_or_else(|| anyhow::anyhow!("Topic '{name}' not found"))?;
+                ctx.entry_mgr.list_by_topic(t.id).await?
+            }
+            (None, None) => ctx.entry_mgr.list_all().await?,
+            (Some(_), Some(_)) => unreachable!("mutually exclusive guard above"),
         }
-        (None, Some(name)) => {
-            let t = ctx
-                .topic_mgr
-                .get_by_name(name)
-                .await?
-                .ok_or_else(|| anyhow::anyhow!("Topic '{name}' not found"))?;
-            ctx.entry_mgr.list_by_topic(t.id).await?
-        }
-        (None, None) => ctx.entry_mgr.list_all().await?,
-        (Some(_), Some(_)) => unreachable!("mutually exclusive guard above"),
     };
 
     if let Some(filter) = state_filter {
@@ -165,5 +188,43 @@ pub async fn inspect(ctx: &AppContext, id: &str) -> Result<()> {
     println!("Summary:   {}", e.summary.as_deref().unwrap_or("—"));
     println!("Scanned:   {}", e.scanned_at);
     println!("Created:   {}", e.created_at.format("%Y-%m-%d"));
+    Ok(())
+}
+
+pub async fn update(
+    ctx: &AppContext,
+    id: &str,
+    state: Option<&str>,
+    signal: Option<&str>,
+) -> Result<()> {
+    use tankyu_core::domain::types::EntryUpdate;
+    if state.is_none() && signal.is_none() {
+        anyhow::bail!("At least one of --state or --signal must be provided");
+    }
+    let uuid = Uuid::parse_str(id).map_err(|_| anyhow::anyhow!("Invalid UUID: {id}"))?;
+    let state_val = state.map(parse_state).transpose()?;
+    let signal_val = signal.map(parse_signal).transpose()?;
+    let entry = ctx
+        .entry_mgr
+        .update(
+            uuid,
+            EntryUpdate {
+                state: state_val,
+                signal: signal_val,
+                summary: None,
+            },
+        )
+        .await?;
+    if ctx.output.is_json() {
+        println!("{}", serde_json::to_string(&entry)?);
+        return Ok(());
+    }
+    println!("Updated entry: {}", entry.title);
+    if let Some(s) = state {
+        println!("  State: {s}");
+    }
+    if let Some(s) = signal {
+        println!("  Signal: {s}");
+    }
     Ok(())
 }

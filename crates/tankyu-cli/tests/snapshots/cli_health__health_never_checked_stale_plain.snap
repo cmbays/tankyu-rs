@@ -1,0 +1,9 @@
+---
+source: crates/tankyu-cli/tests/cli_health.rs
+expression: stdout
+---
++-------+----------------+-------------+---------------+
+| Kind  | Source         | Type        | Detail        |
++======================================================+
+| stale | rust-lang/rust | github-repo | never checked |
++-------+----------------+-------------+---------------+

@@ -1,10 +1,20 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+use chrono::Utc;
+use uuid::Uuid;
 
 use crate::domain::{ports::ITopicStore, types::Topic};
+use crate::shared::error::TankyuError;
 
-/// Coordinates topic read operations.
+/// Input for creating a new topic.
+pub struct CreateTopicInput {
+    pub name: String,
+    pub description: String,
+    pub tags: Vec<String>,
+}
+
+/// Coordinates topic operations.
 pub struct TopicManager {
     store: Arc<dyn ITopicStore>,
 }
@@ -31,6 +41,36 @@ impl TopicManager {
     pub async fn get_by_name(&self, name: &str) -> Result<Option<Topic>> {
         self.store.get_by_name(name).await
     }
+
+    /// Create a new topic. Errors with `TankyuError::Duplicate` if name already exists.
+    ///
+    /// # Errors
+    /// Returns `TankyuError::Duplicate` if a topic with this name already exists.
+    /// Returns an error if the store write fails.
+    pub async fn create(&self, input: CreateTopicInput) -> Result<Topic> {
+        if self.store.get_by_name(&input.name).await?.is_some() {
+            return Err(TankyuError::Duplicate {
+                kind: "topic".to_string(),
+                name: input.name,
+            }
+            .into());
+        }
+        let now = Utc::now();
+        let topic = Topic {
+            id: Uuid::new_v4(),
+            name: input.name,
+            description: input.description,
+            tags: input.tags,
+            projects: vec![],
+            routing: None,
+            created_at: now,
+            updated_at: now,
+            last_scanned_at: None,
+            scan_count: 0,
+        };
+        self.store.create(topic.clone()).await?;
+        Ok(topic)
+    }
 }
 
 #[cfg(test)]
@@ -53,7 +93,7 @@ mod tests {
     #[async_trait]
     impl ITopicStore for StubTopicStore {
         async fn create(&self, _topic: Topic) -> Result<()> {
-            unimplemented!()
+            Ok(()) // stub — real durability tested in store_compat
         }
         async fn get(&self, id: Uuid) -> Result<Option<Topic>> {
             Ok(self.topics.iter().find(|t| t.id == id).cloned())
@@ -109,5 +149,45 @@ mod tests {
         let store = Arc::new(StubTopicStore { topics: vec![] });
         let mgr = TopicManager::new(store);
         assert!(mgr.get_by_name("missing").await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn test_create_returns_topic_with_correct_fields() {
+        let store = Arc::new(StubTopicStore { topics: vec![] });
+        let mgr = TopicManager::new(store);
+        let result = mgr
+            .create(CreateTopicInput {
+                name: "Rust Async".to_string(),
+                description: "Async Rust patterns".to_string(),
+                tags: vec!["rust".to_string(), "async".to_string()],
+            })
+            .await
+            .unwrap();
+        assert_eq!(result.name, "Rust Async");
+        assert_eq!(result.description, "Async Rust patterns");
+        assert_eq!(result.tags, vec!["rust", "async"]);
+        assert_eq!(result.scan_count, 0);
+        assert!(result.last_scanned_at.is_none());
+        assert!(result.projects.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_create_duplicate_name_returns_error() {
+        let existing = make_topic("Duplicate");
+        let store = Arc::new(StubTopicStore {
+            topics: vec![existing],
+        });
+        let mgr = TopicManager::new(store);
+        let err = mgr
+            .create(CreateTopicInput {
+                name: "Duplicate".to_string(),
+                description: "".to_string(),
+                tags: vec![],
+            })
+            .await
+            .unwrap_err();
+        // Downcast to TankyuError::Duplicate
+        let tankyu_err = err.downcast::<TankyuError>().unwrap();
+        assert!(matches!(tankyu_err, TankyuError::Duplicate { .. }));
     }
 }

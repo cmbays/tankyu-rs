@@ -6,6 +6,12 @@
 use crate::world::TankyuWorld;
 use cucumber::{given, then, when};
 
+#[given(expr = "entry {string} is classified under topic {string}")]
+fn given_entry_classified(world: &mut TankyuWorld, entry_id: String, topic_id: String) {
+    world.write_topic(&topic_id, "Test Topic");
+    world.write_tagged_with_edge(&entry_id, &topic_id);
+}
+
 #[given("the data directory contains 3 entries with mixed state")]
 fn given_three_entries(world: &mut TankyuWorld) {
     world.write_entry(

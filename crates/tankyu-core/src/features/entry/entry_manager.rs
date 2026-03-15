@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use crate::domain::{
     ports::{IEntryStore, IGraphStore},
-    types::{EdgeType, Entry, EntryState, Signal},
+    types::{EdgeType, Entry, EntryState, EntryUpdate, Signal},
 };
 
 /// Coordinates entry read operations.
@@ -87,6 +87,14 @@ impl EntryManager {
     pub async fn get(&self, id: Uuid) -> Result<Option<Entry>> {
         self.store.get(id).await
     }
+
+    /// Apply a partial update to an entry. Returns the updated entry.
+    ///
+    /// # Errors
+    /// Returns an error if the entry is not found or the store write fails.
+    pub async fn update(&self, id: Uuid, patch: EntryUpdate) -> Result<Entry> {
+        self.store.update(id, patch).await
+    }
 }
 
 #[cfg(test)]
@@ -97,6 +105,7 @@ mod tests {
             Edge, EdgeType, Entry, EntryState, EntryType, EntryUpdate, GraphQuery, NodeType, Signal,
         },
     };
+    use crate::shared::error::TankyuError;
     use anyhow::Result;
     use async_trait::async_trait;
     use chrono::Utc;
@@ -134,8 +143,23 @@ mod tests {
         async fn list(&self) -> Result<Vec<Entry>> {
             Ok(self.entries.clone())
         }
-        async fn update(&self, _id: Uuid, _u: EntryUpdate) -> Result<Entry> {
-            unimplemented!()
+        async fn update(&self, id: Uuid, u: EntryUpdate) -> Result<Entry> {
+            let mut entry = self
+                .entries
+                .iter()
+                .find(|e| e.id == id)
+                .cloned()
+                .ok_or_else(|| TankyuError::NotFound(id.to_string()))?;
+            if let Some(state) = u.state {
+                entry.state = state;
+            }
+            if let Some(signal) = u.signal {
+                entry.signal = Some(signal);
+            }
+            if let Some(summary) = u.summary {
+                entry.summary = Some(summary);
+            }
+            Ok(entry)
         }
     }
 
@@ -445,5 +469,75 @@ mod tests {
         let mgr = EntryManager::new(store, graph);
         let result = mgr.get(Uuid::new_v4()).await.unwrap();
         assert!(result.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_update_state_only() {
+        let entry = make_entry("Target", EntryState::New);
+        let id = entry.id;
+        let store = Arc::new(StubEntryStore {
+            entries: vec![entry],
+        });
+        let graph = Arc::new(StubGraphStore { edges: vec![] });
+        let mgr = EntryManager::new(store, graph);
+        let result = mgr
+            .update(
+                id,
+                EntryUpdate {
+                    state: Some(EntryState::Read),
+                    signal: None,
+                    summary: None,
+                },
+            )
+            .await
+            .unwrap();
+        assert!(matches!(result.state, EntryState::Read));
+    }
+
+    #[tokio::test]
+    async fn test_update_signal_only() {
+        let entry = make_entry("Target", EntryState::New);
+        let id = entry.id;
+        let store = Arc::new(StubEntryStore {
+            entries: vec![entry],
+        });
+        let graph = Arc::new(StubGraphStore { edges: vec![] });
+        let mgr = EntryManager::new(store, graph);
+        let result = mgr
+            .update(
+                id,
+                EntryUpdate {
+                    state: None,
+                    signal: Some(Signal::High),
+                    summary: None,
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(result.signal, Some(Signal::High));
+    }
+
+    #[tokio::test]
+    async fn test_update_state_and_signal() {
+        let entry = make_entry("Target", EntryState::New);
+        let id = entry.id;
+        let store = Arc::new(StubEntryStore {
+            entries: vec![entry],
+        });
+        let graph = Arc::new(StubGraphStore { edges: vec![] });
+        let mgr = EntryManager::new(store, graph);
+        let result = mgr
+            .update(
+                id,
+                EntryUpdate {
+                    state: Some(EntryState::Triaged),
+                    signal: Some(Signal::Medium),
+                    summary: None,
+                },
+            )
+            .await
+            .unwrap();
+        assert!(matches!(result.state, EntryState::Triaged));
+        assert_eq!(result.signal, Some(Signal::Medium));
     }
 }
