@@ -601,6 +601,188 @@ mod tests {
         );
     }
 
+    // ── list_by_topic / ensure_monitors_edge mutation killers ──────────────
+
+    #[tokio::test]
+    async fn test_list_by_topic_ignores_non_monitors_edges_from_same_topic() {
+        // Mutation killer: && edge_type == Monitors → || would include TaggedWith edges
+        let topic_id = Uuid::new_v4();
+        let s_id = Uuid::new_v4();
+        let edge = Edge {
+            id: Uuid::new_v4(),
+            from_id: topic_id,
+            from_type: NodeType::Topic,
+            to_id: s_id,
+            to_type: NodeType::Source,
+            edge_type: EdgeType::TaggedWith, // NOT Monitors
+            reason: "test".to_string(),
+            score: None,
+            method: None,
+            created_at: Utc::now(),
+        };
+        let store = Arc::new(StubSourceStore::with_sources(vec![make_source(s_id, None)]));
+        let graph = Arc::new(StubGraphStore { edges: vec![edge] });
+        let mgr = SourceManager::new(store, graph);
+        let result = mgr.list_by_topic(topic_id).await.unwrap();
+        assert!(
+            result.is_empty(),
+            "TaggedWith edge should not be treated as Monitors"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_add_monitors_edge_not_blocked_by_different_source_edge() {
+        // Mutation killer: && to_id == source_id → || would block new edge when only from_id matches
+        struct TrackingGraphStore {
+            edges: Mutex<Vec<Edge>>,
+        }
+        #[async_trait]
+        impl IGraphStore for TrackingGraphStore {
+            async fn add_edge(&self, e: Edge) -> Result<()> {
+                self.edges.lock().unwrap().push(e);
+                Ok(())
+            }
+            async fn remove_edge(&self, _id: Uuid) -> Result<()> {
+                Ok(())
+            }
+            async fn get_edges_by_node(&self, _id: Uuid) -> Result<Vec<Edge>> {
+                Ok(self.edges.lock().unwrap().clone())
+            }
+            async fn get_neighbors(&self, _id: Uuid, _et: Option<EdgeType>) -> Result<Vec<Edge>> {
+                Ok(vec![])
+            }
+            async fn query(&self, _q: GraphQuery) -> Result<Vec<Edge>> {
+                Ok(self.edges.lock().unwrap().clone())
+            }
+            async fn list(&self) -> Result<Vec<Edge>> {
+                Ok(self.edges.lock().unwrap().clone())
+            }
+        }
+
+        let topic_id = Uuid::new_v4();
+        let other_source_id = Uuid::new_v4();
+        // Pre-seed with a Monitors edge from topic to a DIFFERENT source
+        let pre_existing_edge = Edge {
+            id: Uuid::new_v4(),
+            from_id: topic_id,
+            from_type: NodeType::Topic,
+            to_id: other_source_id,
+            to_type: NodeType::Source,
+            edge_type: EdgeType::Monitors,
+            reason: "existing".to_string(),
+            score: None,
+            method: None,
+            created_at: Utc::now(),
+        };
+        let store = Arc::new(StubSourceStore::empty());
+        let graph = Arc::new(TrackingGraphStore {
+            edges: Mutex::new(vec![pre_existing_edge]),
+        });
+        let mgr = SourceManager::new(store, Arc::clone(&graph) as Arc<dyn IGraphStore>);
+        // Add a source with the same topic — edge to NEW source should be created
+        mgr.add(AddSourceInput {
+            url: "https://github.com/new/repo".to_string(),
+            name: None,
+            source_type: None,
+            role: None,
+            topic_id: Some(topic_id),
+        })
+        .await
+        .unwrap();
+        // Should now have 2 edges: pre-existing + new
+        assert_eq!(
+            graph.edges.lock().unwrap().len(),
+            2,
+            "existing edge to different source should not block new edge creation"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_add_monitors_edge_not_blocked_by_wrong_edge_type() {
+        // Mutation killer: && edge_type == Monitors → || would block new edge when only from_id and to_id match
+        struct TrackingGraphStore2 {
+            edges: Mutex<Vec<Edge>>,
+        }
+        #[async_trait]
+        impl IGraphStore for TrackingGraphStore2 {
+            async fn add_edge(&self, e: Edge) -> Result<()> {
+                self.edges.lock().unwrap().push(e);
+                Ok(())
+            }
+            async fn remove_edge(&self, _id: Uuid) -> Result<()> {
+                Ok(())
+            }
+            async fn get_edges_by_node(&self, _id: Uuid) -> Result<Vec<Edge>> {
+                Ok(self.edges.lock().unwrap().clone())
+            }
+            async fn get_neighbors(&self, _id: Uuid, _et: Option<EdgeType>) -> Result<Vec<Edge>> {
+                Ok(vec![])
+            }
+            async fn query(&self, _q: GraphQuery) -> Result<Vec<Edge>> {
+                Ok(self.edges.lock().unwrap().clone())
+            }
+            async fn list(&self) -> Result<Vec<Edge>> {
+                Ok(self.edges.lock().unwrap().clone())
+            }
+        }
+
+        let topic_id = Uuid::new_v4();
+        // We'll let the store create the source for us, then separately seed a wrong-type edge
+        // targeting that same source. We do this by pre-creating the source in the store.
+        let store = Arc::new(StubSourceStore::empty());
+        let graph = Arc::new(TrackingGraphStore2 {
+            edges: Mutex::new(vec![]),
+        });
+        let mgr = SourceManager::new(
+            Arc::clone(&store) as Arc<dyn ISourceStore>,
+            Arc::clone(&graph) as Arc<dyn IGraphStore>,
+        );
+        // First add creates the source and the Monitors edge
+        let source = mgr
+            .add(AddSourceInput {
+                url: "https://github.com/new/repo2".to_string(),
+                name: None,
+                source_type: None,
+                role: None,
+                topic_id: Some(topic_id),
+            })
+            .await
+            .unwrap();
+        // Replace the edges with a TaggedWith edge (same from_id and to_id, wrong type)
+        {
+            let mut edges = graph.edges.lock().unwrap();
+            edges.clear();
+            edges.push(Edge {
+                id: Uuid::new_v4(),
+                from_id: topic_id,
+                from_type: NodeType::Topic,
+                to_id: source.id,
+                to_type: NodeType::Source,
+                edge_type: EdgeType::TaggedWith, // NOT Monitors
+                reason: "wrong type".to_string(),
+                score: None,
+                method: None,
+                created_at: Utc::now(),
+            });
+        }
+        // Second add: same URL → same source, same topic; TaggedWith edge should NOT be treated as existing Monitors edge
+        mgr.add(AddSourceInput {
+            url: "https://github.com/new/repo2".to_string(),
+            name: None,
+            source_type: None,
+            role: None,
+            topic_id: Some(topic_id),
+        })
+        .await
+        .unwrap();
+        // Should now have 2 edges: the TaggedWith seed + the newly created Monitors
+        assert_eq!(
+            graph.edges.lock().unwrap().len(),
+            2,
+            "TaggedWith edge should not prevent creation of a new Monitors edge"
+        );
+    }
+
     // ── remove() tests ─────────────────────────────────────────────────────
 
     #[tokio::test]

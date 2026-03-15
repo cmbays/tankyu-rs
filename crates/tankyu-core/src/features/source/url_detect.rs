@@ -174,6 +174,33 @@ mod tests {
         );
     }
 
+    #[test]
+    fn blog_devto_url() {
+        // Mutation killer: || → && would require all terms to match; dev.to alone must suffice
+        assert_eq!(
+            detect_source_type("https://dev.to/article"),
+            SourceType::Blog
+        );
+    }
+
+    #[test]
+    fn rss_rss_path() {
+        // Mutation killer: || → && in RSS detection; /rss alone must match
+        assert_eq!(
+            detect_source_type("https://example.com/rss"),
+            SourceType::RssFeed
+        );
+    }
+
+    #[test]
+    fn rss_atom_path_only() {
+        // Mutation killer: || → && in RSS detection; /atom alone must match (not combined with /feed or /rss)
+        assert_eq!(
+            detect_source_type("https://example.com/atom"),
+            SourceType::RssFeed
+        );
+    }
+
     // ── name_from_url ──────────────────────────────────────────────────────
 
     #[test]

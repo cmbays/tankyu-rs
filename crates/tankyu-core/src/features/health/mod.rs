@@ -395,4 +395,48 @@ mod tests {
         let report = mgr.health(thresholds()).await.unwrap();
         assert!(!report.ok);
     }
+
+    #[tokio::test]
+    async fn test_source_at_exact_stale_boundary_is_not_stale() {
+        // Mutation killer: age_days == stale_days should NOT produce stale warning
+        let source = make_source("boundary-stale", Some(7)); // exactly stale_days
+        let id = source.id;
+        let entry = make_entry(id);
+        let store = Arc::new(StubSourceStore {
+            sources: vec![source],
+        });
+        let entries = Arc::new(StubEntryStore {
+            entries: vec![entry],
+        });
+        let mgr = HealthManager::new(store, entries);
+        let report = mgr.health(thresholds()).await.unwrap();
+        assert!(
+            report.ok,
+            "source at exact stale boundary should be healthy"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_source_at_exact_dormant_boundary_is_not_dormant() {
+        // Mutation killer: age_days == dormant_days should NOT produce dormant warning
+        let source = make_source("boundary-dormant", Some(30)); // exactly dormant_days
+        let id = source.id;
+        let entry = make_entry(id);
+        let store = Arc::new(StubSourceStore {
+            sources: vec![source],
+        });
+        let entries = Arc::new(StubEntryStore {
+            entries: vec![entry],
+        });
+        let mgr = HealthManager::new(store, entries);
+        let report = mgr.health(thresholds()).await.unwrap();
+        // At exactly dormant_days, should not be Dormant
+        assert!(
+            !report
+                .warnings
+                .iter()
+                .any(|w| w.kind == HealthWarningKind::Dormant),
+            "source at exact dormant boundary should not produce Dormant warning"
+        );
+    }
 }
