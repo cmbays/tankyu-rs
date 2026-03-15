@@ -50,10 +50,7 @@ pub fn detect_source_type(url: &str) -> SourceType {
 pub fn name_from_url(url: &str) -> String {
     let without_scheme = url.split_once("://").map_or(url, |x| x.1);
     let without_query = without_scheme.split('?').next().unwrap_or(without_scheme);
-    let parts: Vec<&str> = without_query
-        .split('/')
-        .filter(|s| !s.is_empty())
-        .collect();
+    let parts: Vec<&str> = without_query.split('/').filter(|s| !s.is_empty()).collect();
     // parts[0] = hostname; parts[1..] = path segments
     parts.get(1).map_or_else(
         || parts.first().copied().unwrap_or(url).to_string(),
@@ -181,7 +178,10 @@ mod tests {
 
     #[test]
     fn github_repo_name() {
-        assert_eq!(name_from_url("https://github.com/rust-lang/rust"), "rust-lang/rust");
+        assert_eq!(
+            name_from_url("https://github.com/rust-lang/rust"),
+            "rust-lang/rust"
+        );
     }
 
     #[test]
