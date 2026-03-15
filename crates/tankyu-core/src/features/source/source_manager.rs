@@ -154,6 +154,8 @@ impl SourceManager {
 
     /// Create a `Monitors` edge from `topic_id` → `source_id` unless one already exists.
     async fn ensure_monitors_edge(&self, source_id: Uuid, topic_id: Uuid) -> Result<()> {
+        // Query by source_id: get_edges_by_node returns all edges where from_id or to_id
+        // matches, so this finds any existing Monitors edge targeting this source.
         let edges = self.graph.get_edges_by_node(source_id).await?;
         let already_exists = edges.iter().any(|e| {
             e.from_id == topic_id && e.to_id == source_id && e.edge_type == EdgeType::Monitors
@@ -242,8 +244,16 @@ mod tests {
         async fn list(&self) -> Result<Vec<Source>> {
             Ok(self.sources.lock().unwrap().clone())
         }
-        async fn update(&self, _id: Uuid, _u: SourceUpdate) -> Result<Source> {
-            unimplemented!()
+        async fn update(&self, id: Uuid, u: SourceUpdate) -> Result<Source> {
+            let mut sources = self.sources.lock().unwrap();
+            let source = sources
+                .iter_mut()
+                .find(|s| s.id == id)
+                .expect("source not found in stub");
+            if let Some(role) = u.role {
+                source.role = Some(role);
+            }
+            Ok(source.clone())
         }
     }
 
@@ -372,6 +382,27 @@ mod tests {
     }
 
     // ── add() tests ────────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_add_duplicate_url_updates_role_when_different() {
+        let existing = make_source(Uuid::new_v4(), Some(SourceRole::Starred));
+        let url = existing.url.clone();
+        let store = Arc::new(StubSourceStore::with_sources(vec![existing.clone()]));
+        let graph = Arc::new(StubGraphStore { edges: vec![] });
+        let mgr = SourceManager::new(store, graph);
+        let result = mgr
+            .add(AddSourceInput {
+                url,
+                name: None,
+                source_type: None,
+                role: Some(SourceRole::RoleModel),
+                topic_id: None,
+            })
+            .await
+            .unwrap();
+        assert_eq!(result.id, existing.id);
+        assert_eq!(result.role, Some(SourceRole::RoleModel));
+    }
 
     #[tokio::test]
     async fn test_add_creates_new_source_for_unknown_url() {
