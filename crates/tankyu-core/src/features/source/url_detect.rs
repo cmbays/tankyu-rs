@@ -175,6 +175,15 @@ mod tests {
     }
 
     #[test]
+    fn blog_prefix_url() {
+        // Mutation killer: `blog.` prefix (not `.blog` suffix) must match
+        assert_eq!(
+            detect_source_type("https://blog.example.com/post"),
+            SourceType::Blog
+        );
+    }
+
+    #[test]
     fn blog_devto_url() {
         // Mutation killer: || → && would require all terms to match; dev.to alone must suffice
         assert_eq!(
