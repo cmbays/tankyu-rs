@@ -41,6 +41,8 @@ pub enum Commands {
     },
     /// Run diagnostics on the data directory
     Doctor,
+    /// Check source health — stale, dormant, and empty sources
+    Health,
 }
 
 #[derive(Subcommand)]
@@ -49,6 +51,14 @@ pub enum TopicCommands {
     List,
     /// Inspect a topic by name
     Inspect { name: String },
+    /// Create a new research topic
+    Create {
+        name: String,
+        #[arg(long, default_value = "")]
+        description: String,
+        #[arg(long, default_value = "")]
+        tags: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -62,6 +72,22 @@ pub enum SourceCommands {
         #[arg(long)]
         role: Option<String>,
     },
+    /// Show full details for a source
+    Inspect { name: String },
+    /// Add a source (auto-detects type from URL)
+    Add {
+        url: String,
+        #[arg(long)]
+        name: Option<String>,
+        #[arg(long)]
+        topic: Option<String>,
+        #[arg(long)]
+        role: Option<String>,
+        #[arg(long, value_name = "TYPE")]
+        source_type: Option<String>,
+    },
+    /// Mark a source as pruned
+    Remove { name: String },
 }
 
 #[derive(Subcommand)]
@@ -83,11 +109,22 @@ pub enum EntryCommands {
         /// Limit number of results (applied after all filters)
         #[arg(long)]
         limit: Option<usize>,
+        /// Show only entries with no topic classification
+        #[arg(long)]
+        unclassified: bool,
     },
     /// Inspect a single entry by UUID
     Inspect {
         /// Entry UUID
         id: String,
+    },
+    /// Update entry fields (state and/or signal)
+    Update {
+        id: String,
+        #[arg(long)]
+        state: Option<String>,
+        #[arg(long)]
+        signal: Option<String>,
     },
 }
 
