@@ -14,7 +14,7 @@ pub struct CreateTopicInput {
     pub tags: Vec<String>,
 }
 
-/// Coordinates topic read operations.
+/// Coordinates topic operations.
 pub struct TopicManager {
     store: Arc<dyn ITopicStore>,
 }
@@ -174,7 +174,9 @@ mod tests {
     #[tokio::test]
     async fn test_create_duplicate_name_returns_error() {
         let existing = make_topic("Duplicate");
-        let store = Arc::new(StubTopicStore { topics: vec![existing] });
+        let store = Arc::new(StubTopicStore {
+            topics: vec![existing],
+        });
         let mgr = TopicManager::new(store);
         let err = mgr
             .create(CreateTopicInput {
