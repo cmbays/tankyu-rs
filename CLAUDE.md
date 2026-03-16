@@ -32,3 +32,28 @@ Set `TANKYU_DIR` env var to override the data directory (used in tests).
 - Optional fields (`.optional()` in TS): `Option<T>` with no extra annotation
 - Async traits via `async-trait` crate
 - Error handling: `TankyuError` (thiserror) in core, `anyhow` at CLI boundary
+
+## Rule Maintenance
+
+Scoped rules live in `.claude/rules/`. When you discover a new pattern, convention, or footgun during development:
+
+1. Add it to the matching rule file (by `paths:` scope)
+2. If no rule file matches, create one with appropriate `paths:` globs
+3. Keep rules concise — enforcement language ("Never", "Always", "Must"), not explanations
+
+## Compact Instructions
+
+When context is compressed during long sessions, **preserve**:
+
+- Current task objective and acceptance criteria
+- Active file paths being modified
+- Test results (pass/fail state, which tests)
+- TDD phase (red/green/refactor) and what's next
+- Any user decisions or corrections from this session
+
+**Discard**:
+
+- File contents read more than 5 tool calls ago (re-read if needed)
+- Exploratory searches that didn't yield results
+- Intermediate build output (only keep final pass/fail)
+- Plan text if already being executed (keep current step only)

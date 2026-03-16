@@ -2,7 +2,12 @@
 .DS_Store
 .env
 *.tmp
+*.log
 .worktrees/
 mutants.out/
 mutants.out.old/
 docs/private/
+
+# Claude Code — track rules, ignore everything else
+.claude/*
+!.claude/rules/
