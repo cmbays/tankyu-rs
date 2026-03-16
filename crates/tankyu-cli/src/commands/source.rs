@@ -131,11 +131,11 @@ pub async fn inspect(ctx: &AppContext, name: &str) -> Result<()> {
     println!("Check count:  {}", s.check_count);
     println!("Hit count:    {}", s.hit_count);
     println!("Miss count:   {}", s.miss_count);
-    println!(
-        "Last checked: {}",
-        s.last_checked_at
-            .map_or_else(|| "never".to_string(), |t| t.format("%Y-%m-%d %H:%M").to_string())
+    let last_checked = s.last_checked_at.map_or_else(
+        || "never".into(),
+        |t| t.format("%Y-%m-%d %H:%M").to_string(),
     );
+    println!("Last checked: {last_checked}");
     println!("Created:      {}", s.created_at.format("%Y-%m-%d"));
     Ok(())
 }
