@@ -265,19 +265,23 @@ mod tests {
         async fn list(&self) -> Result<Vec<Source>> {
             Ok(self.sources.lock().unwrap().clone())
         }
+        #[allow(clippy::significant_drop_tightening)]
         async fn update(&self, id: Uuid, u: SourceUpdate) -> Result<Source> {
-            let mut sources = self.sources.lock().unwrap();
-            let source = sources
-                .iter_mut()
-                .find(|s| s.id == id)
-                .expect("source not found in stub");
-            if let Some(role) = u.role {
-                source.role = Some(role);
-            }
-            if let Some(state) = u.state {
-                source.state = state;
-            }
-            Ok(source.clone())
+            let result = {
+                let mut sources = self.sources.lock().unwrap();
+                let source = sources
+                    .iter_mut()
+                    .find(|s| s.id == id)
+                    .expect("source not found in stub");
+                if let Some(role) = u.role {
+                    source.role = Some(role);
+                }
+                if let Some(state) = u.state {
+                    source.state = state;
+                }
+                source.clone()
+            };
+            Ok(result)
         }
     }
 

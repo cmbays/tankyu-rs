@@ -93,7 +93,7 @@ mod tests {
         );
     }
 
-    /// Mutation killer: issues must be checked BEFORE repo to avoid false GithubRepo match
+    /// Mutation killer: issues must be checked BEFORE repo to avoid false `GithubRepo` match
     #[test]
     fn github_issues_not_matched_as_repo() {
         assert_ne!(

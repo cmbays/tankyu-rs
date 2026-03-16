@@ -181,7 +181,7 @@ mod tests {
         let err = mgr
             .create(CreateTopicInput {
                 name: "Duplicate".to_string(),
-                description: "".to_string(),
+                description: String::new(),
                 tags: vec![],
             })
             .await

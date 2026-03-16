@@ -90,8 +90,7 @@ impl TankyuWorld {
         use chrono::{Duration, Utc};
         let last_checked = last_checked_days_ago
             .map(|d| (Utc::now() - Duration::days(d)).to_rfc3339())
-            .map(serde_json::Value::String)
-            .unwrap_or(serde_json::Value::Null);
+            .map_or(serde_json::Value::Null, serde_json::Value::String);
         write_json(
             self.data_dir.path().join(format!("sources/{id}.json")),
             &serde_json::json!({
