@@ -72,7 +72,7 @@ fn health_json() {
     assert_eq!(v["ok"], true);
     assert!(v["warnings"].as_array().unwrap().is_empty());
     // Strip dynamic checkedAt before snapshotting
-    let mut stable = v.clone();
+    let mut stable = v;
     stable["checkedAt"] = serde_json::Value::String("<dynamic>".to_string());
     insta::assert_snapshot!(serde_json::to_string_pretty(&stable).unwrap());
 }
