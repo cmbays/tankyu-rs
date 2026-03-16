@@ -8,9 +8,14 @@ on:
     - cron: '0 6 * * 1'   # Monday 06:00 UTC — weekly mutation scan
   workflow_dispatch:         # manual trigger for weekly scan
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   test:
     name: test (${{ matrix.os }})
+    if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -62,7 +67,7 @@ jobs:
     name: coverage
     runs-on: ubuntu-latest
     needs: test
-    if: github.event_name != 'schedule'
+    if: always() && needs.test.result == 'success'
 
     steps:
       - uses: actions/checkout@v4
@@ -208,8 +213,6 @@ jobs:
     name: weekly mutation scan
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    permissions:
-      issues: write
 
     steps:
       - uses: actions/checkout@v4
