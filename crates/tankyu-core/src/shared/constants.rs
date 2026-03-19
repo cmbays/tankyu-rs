@@ -73,6 +73,18 @@ mod tests {
         assert_eq!(dir, dirs::home_dir().unwrap().join(".tankyu"));
     }
 
+    /// Verify `tankyu_dir()` (the public wrapper) reads the `TANKYU_DIR` env var.
+    ///
+    /// Uses a unique value unlikely to collide with parallel tests.
+    #[test]
+    fn tankyu_dir_reads_env_var() {
+        let unique = "/tmp/tankyu-dir-env-test-42";
+        std::env::set_var("TANKYU_DIR", unique);
+        let result = tankyu_dir();
+        std::env::remove_var("TANKYU_DIR");
+        assert_eq!(result, PathBuf::from(unique));
+    }
+
     #[test]
     fn sub_paths_derive_from_base() {
         let base = PathBuf::from("/tmp/test");

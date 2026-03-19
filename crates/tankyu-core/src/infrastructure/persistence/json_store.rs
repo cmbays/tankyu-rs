@@ -182,4 +182,60 @@ mod tests {
         ids.sort();
         assert_eq!(ids, vec!["a".to_string(), "b".to_string()]);
     }
+
+    #[tokio::test]
+    async fn delete_existing_removes_file() {
+        let dir = tempdir().unwrap();
+        let store: JsonStore<TankyuConfig> = JsonStore::new(dir.path().to_path_buf());
+        let config = make_config();
+        store.write("config", &config).await.unwrap();
+        assert!(dir.path().join("config.json").exists());
+
+        store.delete("config").await.unwrap();
+
+        // File must be gone from disk
+        assert!(!dir.path().join("config.json").exists());
+        // Read after delete must return NotFound
+        let result = store.read("config").await;
+        assert!(matches!(
+            result,
+            Err(crate::shared::error::TankyuError::NotFound(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn delete_nonexistent_returns_not_found() {
+        let dir = tempdir().unwrap();
+        let store: JsonStore<TankyuConfig> = JsonStore::new(dir.path().to_path_buf());
+        let result = store.delete("nonexistent").await;
+        assert!(matches!(
+            result,
+            Err(crate::shared::error::TankyuError::NotFound(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn list_ids_on_nonexistent_dir() {
+        let dir = tempdir().unwrap();
+        let missing = dir.path().join("does_not_exist");
+        let store: JsonStore<TankyuConfig> = JsonStore::new(missing);
+        let ids = store.list_ids().await.unwrap();
+        assert!(ids.is_empty());
+    }
+
+    #[tokio::test]
+    async fn list_ids_propagates_non_not_found_error() {
+        let dir = tempdir().unwrap();
+        // Create a regular file where the store expects a directory
+        let file_path = dir.path().join("not_a_dir");
+        std::fs::write(&file_path, b"I am a file").unwrap();
+        let store: JsonStore<TankyuConfig> = JsonStore::new(file_path);
+        let result = store.list_ids().await;
+        assert!(result.is_err());
+        // Must NOT be Ok(empty vec) — must propagate the error
+        assert!(!matches!(
+            result,
+            Err(crate::shared::error::TankyuError::NotFound(_))
+        ));
+    }
 }
