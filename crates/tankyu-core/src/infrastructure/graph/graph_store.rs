@@ -255,18 +255,26 @@ mod tests {
         let a = Uuid::new_v4();
         let b = Uuid::new_v4();
         let c = Uuid::new_v4();
+        let d = Uuid::new_v4();
 
+        // Outgoing from a
         store
             .add_edge(make_edge_between(a, b, NodeType::Topic, NodeType::Source, EdgeType::Monitors))
             .await
             .unwrap();
+        // Outgoing from a
         store
             .add_edge(make_edge_between(a, c, NodeType::Topic, NodeType::Entry, EdgeType::Produced))
             .await
             .unwrap();
+        // Incoming to a (tests to_id == node_id path)
+        store
+            .add_edge(make_edge_between(d, a, NodeType::Source, NodeType::Topic, EdgeType::Monitors))
+            .await
+            .unwrap();
 
         let result = store.get_neighbors(a, None).await.unwrap();
-        assert_eq!(result.len(), 2);
+        assert_eq!(result.len(), 3);
     }
 
     #[tokio::test]
