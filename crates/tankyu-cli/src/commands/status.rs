@@ -14,14 +14,7 @@ pub async fn run(ctx: &AppContext) -> Result<()> {
     let report = ctx.status_uc.run().await?;
 
     if ctx.output.is_json() {
-        println!(
-            "{}",
-            serde_json::json!({
-                "topics": report.topics,
-                "sources": report.sources,
-                "entries": report.entries
-            })
-        );
+        println!("{}", serde_json::to_string_pretty(&report)?);
         return Ok(());
     }
 

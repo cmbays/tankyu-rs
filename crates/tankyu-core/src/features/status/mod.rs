@@ -1,11 +1,14 @@
 use std::sync::Arc;
 
+use serde::Serialize;
+
 use crate::domain::research_graph::{IResearchGraph, ParamMap};
 use crate::shared::error::TankyuError;
 
 const STATUS_QUERIES: &str = include_str!("../../infrastructure/nanograph/queries/status.gq");
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StatusReport {
     pub topics: usize,
     pub sources: usize,
