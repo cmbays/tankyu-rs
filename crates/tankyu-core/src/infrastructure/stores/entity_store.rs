@@ -98,4 +98,23 @@ mod tests {
         let list = store.list().await.unwrap();
         assert_eq!(list.len(), 2);
     }
+
+    #[tokio::test]
+    async fn get_returns_entity_by_id() {
+        let dir = tempdir().unwrap();
+        let store = EntityStore::new(dir.path().to_path_buf());
+        let entity = make_entity("Rust");
+        let id = entity.id;
+        store.create(entity).await.unwrap();
+        let found = store.get(id).await.unwrap();
+        assert_eq!(found.unwrap().id, id);
+    }
+
+    #[tokio::test]
+    async fn get_returns_none_for_unknown_id() {
+        let dir = tempdir().unwrap();
+        let store = EntityStore::new(dir.path().to_path_buf());
+        let found = store.get(Uuid::new_v4()).await.unwrap();
+        assert!(found.is_none());
+    }
 }

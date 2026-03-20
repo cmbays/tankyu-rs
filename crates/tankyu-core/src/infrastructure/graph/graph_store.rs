@@ -114,17 +114,32 @@ mod tests {
     use super::*;
     use crate::domain::types::{EdgeType, NodeType};
     use chrono::Utc;
-    use tempfile::tempdir;
+    use tempfile::{tempdir, TempDir};
     use uuid::Uuid;
 
-    fn make_edge() -> Edge {
+    /// Create a `JsonGraphStore` backed by a temp directory.
+    /// Returns both `TempDir` (must stay alive) and the store.
+    fn make_store() -> (TempDir, JsonGraphStore) {
+        let dir = tempdir().unwrap();
+        let store = JsonGraphStore::new(dir.path().join("graph").join("edges.json"));
+        (dir, store)
+    }
+
+    /// Create an edge with specific endpoints and types.
+    fn make_edge_between(
+        from_id: Uuid,
+        to_id: Uuid,
+        from_type: NodeType,
+        to_type: NodeType,
+        edge_type: EdgeType,
+    ) -> Edge {
         Edge {
             id: Uuid::new_v4(),
-            from_id: Uuid::new_v4(),
-            from_type: NodeType::Topic,
-            to_id: Uuid::new_v4(),
-            to_type: NodeType::Source,
-            edge_type: EdgeType::Monitors,
+            from_id,
+            from_type,
+            to_id,
+            to_type,
+            edge_type,
             reason: "test".to_string(),
             score: None,
             method: None,
@@ -132,10 +147,20 @@ mod tests {
         }
     }
 
+    /// Create an edge with random endpoints (convenience for tests that don't care about IDs).
+    fn make_edge() -> Edge {
+        make_edge_between(
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            NodeType::Topic,
+            NodeType::Source,
+            EdgeType::Monitors,
+        )
+    }
+
     #[tokio::test]
     async fn add_then_list() {
-        let dir = tempdir().unwrap();
-        let store = JsonGraphStore::new(dir.path().join("graph").join("edges.json"));
+        let (_dir, store) = make_store();
         let edge = make_edge();
         store.add_edge(edge.clone()).await.unwrap();
         let edges = store.list().await.unwrap();
@@ -145,8 +170,7 @@ mod tests {
 
     #[tokio::test]
     async fn remove_edge() {
-        let dir = tempdir().unwrap();
-        let store = JsonGraphStore::new(dir.path().join("graph").join("edges.json"));
+        let (_dir, store) = make_store();
         let edge = make_edge();
         store.add_edge(edge.clone()).await.unwrap();
         store.remove_edge(edge.id).await.unwrap();
@@ -156,7 +180,6 @@ mod tests {
 
     #[tokio::test]
     async fn reads_graphindex_envelope() {
-        // Verify that the store reads the versioned envelope { version: 1, edges: [...] }
         let dir = tempdir().unwrap();
         let path = dir.path().join("edges.json");
         let edge = make_edge();
@@ -178,5 +201,412 @@ mod tests {
         let store = JsonGraphStore::new(dir.path().join("edges.json"));
         let edges = store.list().await.unwrap();
         assert!(edges.is_empty());
+    }
+
+    #[tokio::test]
+    async fn get_edges_by_node_returns_matching() {
+        let (_dir, store) = make_store();
+        let n1 = Uuid::new_v4();
+        let n2 = Uuid::new_v4();
+        let n3 = Uuid::new_v4();
+        let n4 = Uuid::new_v4();
+        let n5 = Uuid::new_v4();
+
+        // n1→n2, n2→n3, n4→n5
+        store
+            .add_edge(make_edge_between(
+                n1,
+                n2,
+                NodeType::Topic,
+                NodeType::Source,
+                EdgeType::Monitors,
+            ))
+            .await
+            .unwrap();
+        store
+            .add_edge(make_edge_between(
+                n2,
+                n3,
+                NodeType::Topic,
+                NodeType::Source,
+                EdgeType::Monitors,
+            ))
+            .await
+            .unwrap();
+        store
+            .add_edge(make_edge_between(
+                n4,
+                n5,
+                NodeType::Topic,
+                NodeType::Source,
+                EdgeType::Monitors,
+            ))
+            .await
+            .unwrap();
+
+        let result = store.get_edges_by_node(n2).await.unwrap();
+        assert_eq!(result.len(), 2);
+        assert!(result
+            .iter()
+            .all(|edge| edge.from_id == n2 || edge.to_id == n2));
+    }
+
+    #[tokio::test]
+    async fn get_edges_by_node_empty_when_no_match() {
+        let (_dir, store) = make_store();
+        let a = Uuid::new_v4();
+        let b = Uuid::new_v4();
+        let c = Uuid::new_v4();
+
+        store
+            .add_edge(make_edge_between(
+                a,
+                b,
+                NodeType::Topic,
+                NodeType::Source,
+                EdgeType::Monitors,
+            ))
+            .await
+            .unwrap();
+
+        let result = store.get_edges_by_node(c).await.unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[tokio::test]
+    async fn get_neighbors_unfiltered() {
+        let (_dir, store) = make_store();
+        let a = Uuid::new_v4();
+        let b = Uuid::new_v4();
+        let c = Uuid::new_v4();
+        let d = Uuid::new_v4();
+
+        // Outgoing from a
+        store
+            .add_edge(make_edge_between(
+                a,
+                b,
+                NodeType::Topic,
+                NodeType::Source,
+                EdgeType::Monitors,
+            ))
+            .await
+            .unwrap();
+        // Outgoing from a
+        store
+            .add_edge(make_edge_between(
+                a,
+                c,
+                NodeType::Topic,
+                NodeType::Entry,
+                EdgeType::Produced,
+            ))
+            .await
+            .unwrap();
+        // Incoming to a (tests to_id == node_id path)
+        store
+            .add_edge(make_edge_between(
+                d,
+                a,
+                NodeType::Source,
+                NodeType::Topic,
+                EdgeType::Monitors,
+            ))
+            .await
+            .unwrap();
+
+        let result = store.get_neighbors(a, None).await.unwrap();
+        assert_eq!(result.len(), 3);
+    }
+
+    #[tokio::test]
+    async fn get_neighbors_filtered_by_type() {
+        let (_dir, store) = make_store();
+        let a = Uuid::new_v4();
+        let b = Uuid::new_v4();
+        let c = Uuid::new_v4();
+
+        store
+            .add_edge(make_edge_between(
+                a,
+                b,
+                NodeType::Topic,
+                NodeType::Source,
+                EdgeType::Monitors,
+            ))
+            .await
+            .unwrap();
+        store
+            .add_edge(make_edge_between(
+                a,
+                c,
+                NodeType::Topic,
+                NodeType::Entry,
+                EdgeType::Produced,
+            ))
+            .await
+            .unwrap();
+
+        let result = store
+            .get_neighbors(a, Some(EdgeType::Monitors))
+            .await
+            .unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].edge_type, EdgeType::Monitors);
+    }
+
+    #[tokio::test]
+    async fn get_neighbors_filtered_no_match() {
+        let (_dir, store) = make_store();
+        let a = Uuid::new_v4();
+        let b = Uuid::new_v4();
+
+        store
+            .add_edge(make_edge_between(
+                a,
+                b,
+                NodeType::Topic,
+                NodeType::Source,
+                EdgeType::Monitors,
+            ))
+            .await
+            .unwrap();
+
+        let result = store
+            .get_neighbors(a, Some(EdgeType::Produced))
+            .await
+            .unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[tokio::test]
+    async fn query_filters_by_from_type() {
+        let (_dir, store) = make_store();
+
+        store
+            .add_edge(make_edge_between(
+                Uuid::new_v4(),
+                Uuid::new_v4(),
+                NodeType::Topic,
+                NodeType::Source,
+                EdgeType::Monitors,
+            ))
+            .await
+            .unwrap();
+        store
+            .add_edge(make_edge_between(
+                Uuid::new_v4(),
+                Uuid::new_v4(),
+                NodeType::Entry,
+                NodeType::Source,
+                EdgeType::Monitors,
+            ))
+            .await
+            .unwrap();
+
+        let result = store
+            .query(GraphQuery {
+                from_type: Some(NodeType::Topic),
+                to_type: None,
+                edge_type: None,
+                from_id: None,
+                to_id: None,
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].from_type, NodeType::Topic);
+    }
+
+    #[tokio::test]
+    async fn query_filters_by_to_type() {
+        let (_dir, store) = make_store();
+
+        store
+            .add_edge(make_edge_between(
+                Uuid::new_v4(),
+                Uuid::new_v4(),
+                NodeType::Topic,
+                NodeType::Source,
+                EdgeType::Monitors,
+            ))
+            .await
+            .unwrap();
+        store
+            .add_edge(make_edge_between(
+                Uuid::new_v4(),
+                Uuid::new_v4(),
+                NodeType::Topic,
+                NodeType::Entry,
+                EdgeType::Monitors,
+            ))
+            .await
+            .unwrap();
+
+        let result = store
+            .query(GraphQuery {
+                from_type: None,
+                to_type: Some(NodeType::Entry),
+                edge_type: None,
+                from_id: None,
+                to_id: None,
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].to_type, NodeType::Entry);
+    }
+
+    #[tokio::test]
+    async fn query_filters_by_edge_type() {
+        let (_dir, store) = make_store();
+
+        store
+            .add_edge(make_edge_between(
+                Uuid::new_v4(),
+                Uuid::new_v4(),
+                NodeType::Topic,
+                NodeType::Source,
+                EdgeType::Monitors,
+            ))
+            .await
+            .unwrap();
+        store
+            .add_edge(make_edge_between(
+                Uuid::new_v4(),
+                Uuid::new_v4(),
+                NodeType::Topic,
+                NodeType::Source,
+                EdgeType::Produced,
+            ))
+            .await
+            .unwrap();
+
+        let result = store
+            .query(GraphQuery {
+                from_type: None,
+                to_type: None,
+                edge_type: Some(EdgeType::Produced),
+                from_id: None,
+                to_id: None,
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].edge_type, EdgeType::Produced);
+    }
+
+    #[tokio::test]
+    async fn query_combines_all_filters() {
+        let (_dir, store) = make_store();
+        let target_from = Uuid::new_v4();
+        let target_to = Uuid::new_v4();
+
+        // The one edge that matches all 5 filters
+        store
+            .add_edge(make_edge_between(
+                target_from,
+                target_to,
+                NodeType::Topic,
+                NodeType::Source,
+                EdgeType::Monitors,
+            ))
+            .await
+            .unwrap();
+
+        // Wrong from_type
+        store
+            .add_edge(make_edge_between(
+                target_from,
+                target_to,
+                NodeType::Entry,
+                NodeType::Source,
+                EdgeType::Monitors,
+            ))
+            .await
+            .unwrap();
+
+        // Wrong to_type
+        store
+            .add_edge(make_edge_between(
+                target_from,
+                target_to,
+                NodeType::Topic,
+                NodeType::Entry,
+                EdgeType::Monitors,
+            ))
+            .await
+            .unwrap();
+
+        // Wrong edge_type
+        store
+            .add_edge(make_edge_between(
+                target_from,
+                target_to,
+                NodeType::Topic,
+                NodeType::Source,
+                EdgeType::Produced,
+            ))
+            .await
+            .unwrap();
+
+        // Wrong from_id
+        store
+            .add_edge(make_edge_between(
+                Uuid::new_v4(),
+                target_to,
+                NodeType::Topic,
+                NodeType::Source,
+                EdgeType::Monitors,
+            ))
+            .await
+            .unwrap();
+
+        // Wrong to_id
+        store
+            .add_edge(make_edge_between(
+                target_from,
+                Uuid::new_v4(),
+                NodeType::Topic,
+                NodeType::Source,
+                EdgeType::Monitors,
+            ))
+            .await
+            .unwrap();
+
+        let result = store
+            .query(GraphQuery {
+                from_type: Some(NodeType::Topic),
+                to_type: Some(NodeType::Source),
+                edge_type: Some(EdgeType::Monitors),
+                from_id: Some(target_from),
+                to_id: Some(target_to),
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].from_id, target_from);
+        assert_eq!(result[0].to_id, target_to);
+    }
+
+    #[tokio::test]
+    async fn read_index_non_not_found_error_propagates() {
+        let dir = tempdir().unwrap();
+        // Point the store at a path that is a directory, not a file.
+        // Reading a directory produces an io error that is NOT NotFound,
+        // so it should propagate rather than returning an empty vec.
+        let dir_path = dir.path().join("a_directory");
+        tokio::fs::create_dir_all(&dir_path).await.unwrap();
+        let store = JsonGraphStore::new(dir_path);
+
+        let result = store.list().await;
+        assert!(
+            result.is_err(),
+            "expected an error for non-NotFound io failure"
+        );
     }
 }

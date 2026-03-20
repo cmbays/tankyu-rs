@@ -171,4 +171,59 @@ mod tests {
             .unwrap();
         assert_eq!(updated.signal, Some(Signal::High));
     }
+
+    #[tokio::test]
+    async fn get_by_url_returns_none_when_no_match() {
+        let dir = tempdir().unwrap();
+        let store = EntryStore::new(dir.path().to_path_buf());
+        let mut e1 = make_entry();
+        e1.url = "https://example.com/a".to_string();
+        let mut e2 = make_entry();
+        e2.url = "https://example.com/b".to_string();
+        store.create(e1).await.unwrap();
+        store.create(e2).await.unwrap();
+        let found = store
+            .get_by_url("https://example.com/no-match")
+            .await
+            .unwrap();
+        assert!(found.is_none());
+    }
+
+    #[tokio::test]
+    async fn get_by_url_returns_matching_entry() {
+        let dir = tempdir().unwrap();
+        let store = EntryStore::new(dir.path().to_path_buf());
+        let mut e1 = make_entry();
+        e1.url = "https://example.com/target".to_string();
+        let mut e2 = make_entry();
+        e2.url = "https://example.com/other".to_string();
+        store.create(e1.clone()).await.unwrap();
+        store.create(e2).await.unwrap();
+        let found = store
+            .get_by_url("https://example.com/target")
+            .await
+            .unwrap();
+        assert_eq!(found.unwrap().id, e1.id);
+    }
+
+    #[tokio::test]
+    async fn list_by_source_excludes_other_sources() {
+        let dir = tempdir().unwrap();
+        let store = EntryStore::new(dir.path().to_path_buf());
+        let source_a = Uuid::new_v4();
+        let source_b = Uuid::new_v4();
+        let mut a1 = make_entry();
+        a1.source_id = source_a;
+        let mut a2 = make_entry();
+        a2.source_id = source_a;
+        let mut b1 = make_entry();
+        b1.source_id = source_b;
+        store.create(a1.clone()).await.unwrap();
+        store.create(a2.clone()).await.unwrap();
+        store.create(b1).await.unwrap();
+
+        let results = store.list_by_source(source_a).await.unwrap();
+        assert_eq!(results.len(), 2);
+        assert!(results.iter().all(|e| e.source_id == source_a));
+    }
 }
