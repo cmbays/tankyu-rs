@@ -206,17 +206,17 @@ mod tests {
     #[tokio::test]
     async fn get_edges_by_node_returns_matching() {
         let (_dir, store) = make_store();
-        let a = Uuid::new_v4();
-        let b = Uuid::new_v4();
-        let c = Uuid::new_v4();
-        let d = Uuid::new_v4();
-        let e = Uuid::new_v4();
+        let n1 = Uuid::new_v4();
+        let n2 = Uuid::new_v4();
+        let n3 = Uuid::new_v4();
+        let n4 = Uuid::new_v4();
+        let n5 = Uuid::new_v4();
 
-        // A→B, B→C, D→E
+        // n1→n2, n2→n3, n4→n5
         store
             .add_edge(make_edge_between(
-                a,
-                b,
+                n1,
+                n2,
                 NodeType::Topic,
                 NodeType::Source,
                 EdgeType::Monitors,
@@ -225,8 +225,8 @@ mod tests {
             .unwrap();
         store
             .add_edge(make_edge_between(
-                b,
-                c,
+                n2,
+                n3,
                 NodeType::Topic,
                 NodeType::Source,
                 EdgeType::Monitors,
@@ -235,8 +235,8 @@ mod tests {
             .unwrap();
         store
             .add_edge(make_edge_between(
-                d,
-                e,
+                n4,
+                n5,
                 NodeType::Topic,
                 NodeType::Source,
                 EdgeType::Monitors,
@@ -244,11 +244,11 @@ mod tests {
             .await
             .unwrap();
 
-        let result = store.get_edges_by_node(b).await.unwrap();
+        let result = store.get_edges_by_node(n2).await.unwrap();
         assert_eq!(result.len(), 2);
         assert!(result
             .iter()
-            .all(|edge| edge.from_id == b || edge.to_id == b));
+            .all(|edge| edge.from_id == n2 || edge.to_id == n2));
     }
 
     #[tokio::test]
