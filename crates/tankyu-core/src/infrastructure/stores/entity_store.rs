@@ -107,7 +107,6 @@ mod tests {
         let id = entity.id;
         store.create(entity).await.unwrap();
         let found = store.get(id).await.unwrap();
-        assert!(found.is_some());
         assert_eq!(found.unwrap().id, id);
     }
 

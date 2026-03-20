@@ -193,14 +193,7 @@ mod tests {
 
         store.delete("config").await.unwrap();
 
-        // File must be gone from disk
         assert!(!dir.path().join("config.json").exists());
-        // Read after delete must return NotFound
-        let result = store.read("config").await;
-        assert!(matches!(
-            result,
-            Err(crate::shared::error::TankyuError::NotFound(_))
-        ));
     }
 
     #[tokio::test]

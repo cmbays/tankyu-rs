@@ -11,4 +11,3 @@ docs/private/
 # Claude Code — track rules, ignore everything else
 .claude/*
 !.claude/rules/
-.claude/focus.md
