@@ -21,7 +21,6 @@ pub struct TankyuWorld {
 }
 
 impl TankyuWorld {
-    #[allow(clippy::unused_async)]
     async fn new() -> Self {
         let dir = TempDir::new().unwrap();
         let b = dir.path();
@@ -39,6 +38,13 @@ impl TankyuWorld {
             b.join("graph/edges.json"),
             &serde_json::json!({ "version": 1, "edges": [] }),
         );
+
+        // Initialize nanograph database so all commands can use it.
+        let db_path = b.join("db");
+        tankyu_core::NanographStore::open(&db_path)
+            .await
+            .expect("failed to initialize nanograph DB for test world");
+
         Self {
             data_dir: dir,
             last_stdout: String::new(),

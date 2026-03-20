@@ -11,10 +11,20 @@ mod output;
 
 use cli::{Cli, Commands, ConfigCommands, EntryCommands, SourceCommands, TopicCommands};
 use context::AppContext;
+use output::OutputMode;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
+
+    // Doctor runs standalone — it must diagnose broken setups.
+    if matches!(cli.command, Commands::Doctor) {
+        let base = cli
+            .tankyu_dir
+            .unwrap_or_else(tankyu_core::shared::constants::tankyu_dir);
+        return commands::doctor::run_standalone(base, OutputMode::detect(cli.json)).await;
+    }
+
     let ctx = AppContext::new(cli.tankyu_dir, cli.json).await?;
     match cli.command {
         Commands::Status => commands::status::run(&ctx).await,
@@ -79,7 +89,7 @@ async fn main() -> Result<()> {
         Commands::Config { command } => match command {
             ConfigCommands::Show => commands::config::show(&ctx),
         },
-        Commands::Doctor => commands::doctor::run(&ctx).await,
+        Commands::Doctor => unreachable!("handled above"),
         Commands::Health => commands::health::run(&ctx).await,
     }
 }

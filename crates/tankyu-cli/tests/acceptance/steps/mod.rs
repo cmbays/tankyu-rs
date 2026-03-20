@@ -1,3 +1,4 @@
+pub mod doctor_steps;
 pub mod entry_steps;
 pub mod health_steps;
 pub mod source_steps;

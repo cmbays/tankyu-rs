@@ -1,0 +1,140 @@
+node Topic {
+    slug: String @key
+    name: String
+    description: String?
+    tags: String?
+    projects: String?
+    routing: String?
+    createdAt: DateTime?
+    updatedAt: DateTime?
+    lastScannedAt: DateTime?
+    scanCount: I32?
+}
+
+node Source {
+    slug: String @key
+    name: String
+    url: String @unique
+    sourceType: String
+    role: String?
+    state: String
+    config: String?
+    pollIntervalMinutes: I32?
+    discoveredVia: String?
+    discoveryReason: String?
+    lastCheckedAt: DateTime?
+    lastNewContentAt: DateTime?
+    checkCount: I32?
+    hitCount: I32?
+    missCount: I32?
+    createdAt: DateTime?
+}
+
+node Entry {
+    slug: String @key
+    sourceSlug: String
+    entryType: String
+    title: String
+    url: String
+    summary: String?
+    contentHash: String?
+    state: String
+    signal: String?
+    scannedAt: DateTime?
+    metadata: String?
+    createdAt: DateTime?
+}
+
+node Insight {
+    slug: String @key
+    insightType: String
+    title: String
+    body: String?
+    keyPoints: String?
+    citations: String?
+    createdAt: DateTime?
+    updatedAt: DateTime?
+    metadata: String?
+}
+
+node Project {
+    slug: String @key
+    name: String
+    description: String?
+    createdAt: DateTime?
+    updatedAt: DateTime?
+}
+
+node Entity {
+    slug: String @key
+    entityType: String
+    name: String
+    aliases: String?
+    url: String?
+    description: String?
+    metadata: String?
+    createdAt: DateTime?
+    updatedAt: DateTime?
+}
+
+edge Monitors: Topic -> Source {
+    reason: String?
+}
+
+edge Produced: Source -> Entry {
+    reason: String?
+}
+
+edge TaggedWith: Entry -> Topic {
+    score: F32?
+    method: String?
+    reason: String?
+}
+
+edge Yields: Entry -> Insight {
+    reason: String?
+}
+
+edge RelatesTo: Topic -> Topic {
+    reason: String?
+}
+
+edge Supersedes: Entry -> Entry {
+    reason: String?
+}
+
+edge Contradicts: Entry -> Entry {
+    reason: String?
+}
+
+edge Informs: Insight -> Topic {
+    reason: String?
+}
+
+edge DiscoveredVia: Source -> Source {
+    reason: String?
+}
+
+edge InspiredBy: Insight -> Entry {
+    reason: String?
+}
+
+edge Mentions: Entry -> Entity {
+    reason: String?
+}
+
+edge Cites: Entry -> Entry {
+    reason: String?
+}
+
+edge CoOccursWith: Entity -> Entity {
+    reason: String?
+}
+
+edge DerivedFrom: Insight -> Insight {
+    reason: String?
+}
+
+edge Synthesizes: Insight -> Entry {
+    reason: String?
+}

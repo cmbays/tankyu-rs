@@ -57,6 +57,11 @@ pub fn edges_path(base: &Path) -> PathBuf {
     graph_dir(base).join("edges.json")
 }
 
+#[must_use]
+pub fn db_path(base: &Path) -> PathBuf {
+    base.join("db")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

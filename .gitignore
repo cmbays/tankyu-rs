@@ -7,6 +7,7 @@
 mutants.out/
 mutants.out.old/
 docs/private/
+.firecrawl/
 
 # Claude Code — track rules, ignore everything else
 .claude/*

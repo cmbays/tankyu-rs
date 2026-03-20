@@ -1,0 +1,14 @@
+query topicCount() {
+    match { $t: Topic }
+    return { count($t) as count }
+}
+
+query sourceCount() {
+    match { $s: Source }
+    return { count($s) as count }
+}
+
+query entryCount() {
+    match { $e: Entry }
+    return { count($e) as count }
+}
