@@ -57,3 +57,40 @@ impl StatusUseCase {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::infrastructure::nanograph::NanographStore;
+
+    #[tokio::test]
+    async fn status_returns_zeros_on_empty_graph() {
+        let graph: Arc<dyn IResearchGraph> =
+            Arc::new(NanographStore::open_in_memory().await.unwrap());
+        let uc = StatusUseCase::new(graph);
+        let report = uc.run().await.unwrap();
+        assert_eq!(report.topics, 0);
+        assert_eq!(report.sources, 0);
+        assert_eq!(report.entries, 0);
+    }
+
+    #[tokio::test]
+    async fn status_reflects_loaded_data() {
+        let store = NanographStore::open_in_memory().await.unwrap();
+        store
+            .load(
+                r#"{"type": "Topic", "data": {"slug": "rust", "name": "Rust"}}
+{"type": "Source", "data": {"slug": "tokio", "name": "tokio", "url": "https://github.com/tokio-rs/tokio", "sourceType": "github-repo", "state": "active"}}
+"#,
+            )
+            .await
+            .unwrap();
+
+        let graph: Arc<dyn IResearchGraph> = Arc::new(store);
+        let uc = StatusUseCase::new(graph);
+        let report = uc.run().await.unwrap();
+        assert_eq!(report.topics, 1);
+        assert_eq!(report.sources, 1);
+        assert_eq!(report.entries, 0);
+    }
+}

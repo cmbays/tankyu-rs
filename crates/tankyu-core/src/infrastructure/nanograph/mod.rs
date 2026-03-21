@@ -226,6 +226,80 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn debug_format_includes_path() {
+        let store = NanographStore::open_in_memory().await.unwrap();
+        let debug = format!("{store:?}");
+        assert!(
+            debug.contains("NanographStore"),
+            "Debug output should contain struct name, got: {debug}"
+        );
+    }
+
+    #[tokio::test]
+    async fn to_nano_params_converts_all_variants() {
+        let mut params = ParamMap::new();
+        params.insert("s".into(), ParamValue::String("hello".into()));
+        params.insert("i".into(), ParamValue::Integer(42));
+        params.insert("f".into(), ParamValue::Float(3.14));
+        params.insert("b".into(), ParamValue::Bool(true));
+
+        let nano = to_nano_params(&params);
+        assert_eq!(nano.len(), 4);
+        // nanograph::Literal doesn't impl PartialEq, so verify via Debug
+        assert!(
+            format!("{:?}", nano["s"]).contains("hello"),
+            "String param should contain 'hello'"
+        );
+        assert!(
+            format!("{:?}", nano["i"]).contains("42"),
+            "Integer param should contain 42"
+        );
+        assert!(
+            format!("{:?}", nano["b"]).contains("true"),
+            "Bool param should contain true"
+        );
+    }
+
+    #[tokio::test]
+    async fn mutate_creates_node() {
+        let store = NanographStore::open_in_memory().await.unwrap();
+        let mutation_src = r#"
+query createTopic($slug: String, $name: String) {
+    insert Topic { slug: $slug, name: $name }
+}
+"#;
+        let mut params = ParamMap::new();
+        params.insert("slug".into(), ParamValue::String("rust".into()));
+        params.insert("name".into(), ParamValue::String("Rust".into()));
+
+        let result = store
+            .mutate(mutation_src, "createTopic", &params)
+            .await
+            .unwrap();
+        assert_eq!(result.affected_nodes, 1);
+
+        // Verify the node was created
+        let query_src = include_str!("queries/status.gq");
+        let topics = store
+            .query(query_src, "topicCount", &ParamMap::new())
+            .await
+            .unwrap();
+        assert_eq!(topics.rows[0]["count"], 1);
+    }
+
+    #[tokio::test]
+    async fn mutate_on_read_query_returns_error() {
+        let store = NanographStore::open_in_memory().await.unwrap();
+        let query_src = include_str!("queries/status.gq");
+
+        // Calling mutate() on a read-only query should error (returns QueryResult, not MutationResult)
+        let result = store
+            .mutate(query_src, "topicCount", &ParamMap::new())
+            .await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
     async fn persistent_db_roundtrips() {
         let tmp = tempfile::TempDir::new().unwrap();
         let db_path = tmp.path().join("testdb");

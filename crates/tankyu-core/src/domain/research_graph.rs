@@ -37,6 +37,50 @@ impl QueryResult {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn first_count_returns_value_from_first_row() {
+        let qr = QueryResult {
+            rows: vec![serde_json::json!({"count": 42})],
+            num_rows: 1,
+        };
+        assert_eq!(qr.first_count("count"), 42);
+    }
+
+    #[test]
+    fn first_count_returns_zero_for_empty_rows() {
+        let qr = QueryResult {
+            rows: vec![],
+            num_rows: 0,
+        };
+        assert_eq!(qr.first_count("count"), 0);
+    }
+
+    #[test]
+    fn first_count_returns_zero_for_missing_field() {
+        let qr = QueryResult {
+            rows: vec![serde_json::json!({"other": 5})],
+            num_rows: 1,
+        };
+        assert_eq!(qr.first_count("count"), 0);
+    }
+
+    #[test]
+    fn first_count_ignores_subsequent_rows() {
+        let qr = QueryResult {
+            rows: vec![
+                serde_json::json!({"count": 7}),
+                serde_json::json!({"count": 99}),
+            ],
+            num_rows: 2,
+        };
+        assert_eq!(qr.first_count("count"), 7);
+    }
+}
+
 /// Result of a write mutation.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct MutationResult {

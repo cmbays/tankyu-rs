@@ -21,3 +21,19 @@ impl DoctorUseCase {
         self.graph.doctor().await
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::infrastructure::nanograph::NanographStore;
+
+    #[tokio::test]
+    async fn doctor_returns_healthy_on_good_db() {
+        let graph: Arc<dyn IResearchGraph> =
+            Arc::new(NanographStore::open_in_memory().await.unwrap());
+        let uc = DoctorUseCase::new(graph);
+        let report = uc.run().await.unwrap();
+        assert!(report.healthy);
+        assert!(report.issues.is_empty());
+    }
+}
