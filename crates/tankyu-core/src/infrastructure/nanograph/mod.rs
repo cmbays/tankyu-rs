@@ -111,7 +111,9 @@ impl NanographStore {
         name: &'a str,
         params: &'a ParamMap,
     ) -> std::pin::Pin<
-        Box<dyn std::future::Future<Output = Result<nanograph::RunResult, TankyuError>> + Send + 'a>,
+        Box<
+            dyn std::future::Future<Output = Result<nanograph::RunResult, TankyuError>> + Send + 'a,
+        >,
     > {
         Box::pin(async move {
             let nano_params = to_nano_params(params);

@@ -19,22 +19,23 @@ pub async fn run_standalone(data_dir: PathBuf, output: OutputMode) -> Result<()>
         let config_path = tankyu_core::shared::constants::config_path(&data_dir);
         if config_path.exists() {
             match tokio::fs::read(&config_path).await {
-                Ok(bytes) => match serde_json::from_slice::<tankyu_core::domain::types::TankyuConfig>(
-                    &bytes,
-                ) {
-                    Ok(cfg) if cfg.version == 1 => true,
-                    Ok(cfg) => {
-                        issues.push(format!(
-                            "Unexpected config version: {} (expected 1)",
-                            cfg.version
-                        ));
-                        false
+                Ok(bytes) => {
+                    match serde_json::from_slice::<tankyu_core::domain::types::TankyuConfig>(&bytes)
+                    {
+                        Ok(cfg) if cfg.version == 1 => true,
+                        Ok(cfg) => {
+                            issues.push(format!(
+                                "Unexpected config version: {} (expected 1)",
+                                cfg.version
+                            ));
+                            false
+                        }
+                        Err(e) => {
+                            issues.push(format!("Config parse error: {e}"));
+                            false
+                        }
                     }
-                    Err(e) => {
-                        issues.push(format!("Config parse error: {e}"));
-                        false
-                    }
-                },
+                }
                 Err(e) => {
                     issues.push(format!("Config read error: {e}"));
                     false

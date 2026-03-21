@@ -58,8 +58,7 @@ mod tests {
 
     #[tokio::test]
     async fn status_returns_zeros_on_empty_graph() {
-        let store: Arc<dyn CountStats> =
-            Arc::new(NanographStore::open_in_memory().await.unwrap());
+        let store: Arc<dyn CountStats> = Arc::new(NanographStore::open_in_memory().await.unwrap());
         let uc = StatusUseCase::new(store);
         let report = uc.run().await.unwrap();
         assert_eq!(report.topics, 0);
