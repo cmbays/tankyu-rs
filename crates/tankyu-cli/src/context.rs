@@ -4,7 +4,6 @@ use anyhow::{Context, Result};
 use tankyu_core::{
     domain::{
         ports::{IEntryStore, IGraphStore, ISourceStore, ITopicStore},
-        research_graph::IResearchGraph,
         types::TankyuConfig,
     },
     features::{
@@ -15,7 +14,7 @@ use tankyu_core::{
         stores::{EntryStore, SourceStore, TopicStore},
     },
     shared::constants,
-    HealthManager, NanographStore,
+    CountStats, HealthManager, NanographStore,
 };
 
 use crate::output::OutputMode;
@@ -56,7 +55,7 @@ impl AppContext {
 
         // Initialize nanograph — auto-creates the DB directory on first run
         let db_path = constants::db_path(&base);
-        let graph: Arc<dyn IResearchGraph> = Arc::new(
+        let stats: Arc<dyn CountStats> = Arc::new(
             NanographStore::open(&db_path)
                 .await
                 .with_context(|| format!("Cannot open research graph at {}", db_path.display()))?,
@@ -68,7 +67,7 @@ impl AppContext {
             entry_mgr: EntryManager::new(entry_store, Arc::clone(&graph_store)),
             health_mgr: HealthManager::new(health_source_store, health_entry_store),
             graph_store: Arc::clone(&graph_store),
-            status_uc: StatusUseCase::new(Arc::clone(&graph)),
+            status_uc: StatusUseCase::new(stats),
             config,
             output: OutputMode::detect(json),
         })

@@ -1,17 +1,61 @@
+use std::collections::HashMap;
 use std::path::Path;
 
 use async_trait::async_trait;
 use nanograph::store::database::Database;
 
-use crate::domain::research_graph::{
-    self, DoctorReport, IResearchGraph, MutationResult, ParamMap, ParamValue, QueryResult,
-};
+use crate::features::doctor::{DoctorReport, GraphDoctor};
+use crate::features::status::CountStats;
 use crate::shared::error::TankyuError;
 
 /// The nanograph schema source, embedded at compile time.
 pub const SCHEMA_SOURCE: &str = include_str!("schema.pg");
 
-/// Wraps a `nanograph::Database` behind the `IResearchGraph` port.
+/// Status count queries, owned by infrastructure.
+const STATUS_QUERIES: &str = include_str!("queries/status.gq");
+
+/// Infrastructure-internal parameter value for nanograph queries.
+/// Variants are constructed by parameterized queries (future feature traits).
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+enum ParamValue {
+    String(String),
+    Integer(i64),
+    Float(f64),
+    Bool(bool),
+}
+
+/// Infrastructure-internal parameter map for nanograph queries.
+type ParamMap = HashMap<String, ParamValue>;
+
+/// Infrastructure-internal query result.
+#[derive(Debug, Clone)]
+struct QueryResult {
+    rows: Vec<serde_json::Value>,
+}
+
+impl QueryResult {
+    /// Extract a single integer field from the first row, defaulting to 0.
+    fn first_count(&self, field: &str) -> usize {
+        self.rows
+            .first()
+            .and_then(|row| row.get(field))
+            .and_then(serde_json::Value::as_u64)
+            .and_then(|v| usize::try_from(v).ok())
+            .unwrap_or(0)
+    }
+}
+
+/// Result of a write mutation (used by mutation feature traits in future sessions).
+#[cfg(test)]
+#[derive(Debug, Clone, Copy, Default)]
+#[allow(dead_code)]
+struct MutationResult {
+    affected_nodes: usize,
+    affected_edges: usize,
+}
+
+/// Wraps a `nanograph::Database` behind per-feature port traits.
 pub struct NanographStore {
     db: Database,
 }
@@ -45,6 +89,17 @@ impl NanographStore {
         Ok(Self { db })
     }
 
+    /// Load JSONL data into the graph (merge mode for keyed nodes).
+    ///
+    /// # Errors
+    /// Returns `TankyuError::Store` if the load fails.
+    pub async fn load(&self, jsonl: &str) -> Result<(), TankyuError> {
+        self.db
+            .load(jsonl)
+            .await
+            .map_err(|e| TankyuError::Store(format!("nanograph load: {e}")))
+    }
+
     /// Internal: run a named query/mutation and return the raw `RunResult`.
     ///
     /// Uses `Box::pin` to break the deeply nested future type that nanograph
@@ -66,6 +121,48 @@ impl NanographStore {
                 .map_err(|e| TankyuError::Store(format!("nanograph run '{name}': {e}")))
         })
     }
+
+    /// Run a named read query from the given source text.
+    async fn query(
+        &self,
+        source: &str,
+        name: &str,
+        params: &ParamMap,
+    ) -> Result<QueryResult, TankyuError> {
+        let result = self.run_named(source, name, params).await?;
+
+        match result {
+            nanograph::RunResult::Query(qr) => {
+                let rows_json = qr.to_rust_json();
+                let rows = rows_json.as_array().cloned().unwrap_or_default();
+                Ok(QueryResult { rows })
+            }
+            nanograph::RunResult::Mutation(_) => Err(TankyuError::Store(format!(
+                "expected query result for '{name}', got mutation result"
+            ))),
+        }
+    }
+
+    /// Run a named mutation from the given source text.
+    #[cfg(test)]
+    async fn mutate(
+        &self,
+        source: &str,
+        name: &str,
+        params: &ParamMap,
+    ) -> Result<MutationResult, TankyuError> {
+        let result = self.run_named(source, name, params).await?;
+
+        match result {
+            nanograph::RunResult::Mutation(mr) => Ok(MutationResult {
+                affected_nodes: mr.affected_nodes,
+                affected_edges: mr.affected_edges,
+            }),
+            nanograph::RunResult::Query(_) => Err(TankyuError::Store(format!(
+                "expected mutation result for '{name}', got query result"
+            ))),
+        }
+    }
 }
 
 impl std::fmt::Debug for NanographStore {
@@ -76,7 +173,7 @@ impl std::fmt::Debug for NanographStore {
     }
 }
 
-/// Convert domain `ParamMap` to nanograph `ParamMap`.
+/// Convert internal `ParamMap` to nanograph `ParamMap`.
 fn to_nano_params(params: &ParamMap) -> nanograph::ParamMap {
     params
         .iter()
@@ -93,55 +190,32 @@ fn to_nano_params(params: &ParamMap) -> nanograph::ParamMap {
 }
 
 #[async_trait]
-impl IResearchGraph for NanographStore {
-    async fn query(
-        &self,
-        source: &str,
-        name: &str,
-        params: &research_graph::ParamMap,
-    ) -> Result<QueryResult, TankyuError> {
-        let result = self.run_named(source, name, params).await?;
-
-        match result {
-            nanograph::RunResult::Query(qr) => {
-                let rows_json = qr.to_rust_json();
-                let rows = rows_json.as_array().cloned().unwrap_or_default();
-                let num_rows = rows.len();
-                Ok(QueryResult { rows, num_rows })
-            }
-            nanograph::RunResult::Mutation(_) => Err(TankyuError::Store(format!(
-                "expected query result for '{name}', got mutation result"
-            ))),
-        }
+impl CountStats for NanographStore {
+    async fn count_topics(&self) -> Result<usize, TankyuError> {
+        Ok(self
+            .query(STATUS_QUERIES, "topicCount", &ParamMap::new())
+            .await?
+            .first_count("count"))
     }
 
-    async fn mutate(
-        &self,
-        source: &str,
-        name: &str,
-        params: &research_graph::ParamMap,
-    ) -> Result<MutationResult, TankyuError> {
-        let result = self.run_named(source, name, params).await?;
-
-        match result {
-            nanograph::RunResult::Mutation(mr) => Ok(MutationResult {
-                affected_nodes: mr.affected_nodes,
-                affected_edges: mr.affected_edges,
-            }),
-            nanograph::RunResult::Query(_) => Err(TankyuError::Store(format!(
-                "expected mutation result for '{name}', got query result"
-            ))),
-        }
+    async fn count_sources(&self) -> Result<usize, TankyuError> {
+        Ok(self
+            .query(STATUS_QUERIES, "sourceCount", &ParamMap::new())
+            .await?
+            .first_count("count"))
     }
 
-    async fn load(&self, jsonl: &str) -> Result<(), TankyuError> {
-        self.db
-            .load(jsonl)
-            .await
-            .map_err(|e| TankyuError::Store(format!("nanograph load: {e}")))
+    async fn count_entries(&self) -> Result<usize, TankyuError> {
+        Ok(self
+            .query(STATUS_QUERIES, "entryCount", &ParamMap::new())
+            .await?
+            .first_count("count"))
     }
+}
 
-    async fn doctor(&self) -> Result<DoctorReport, TankyuError> {
+#[async_trait]
+impl GraphDoctor for NanographStore {
+    async fn check_health(&self) -> Result<DoctorReport, TankyuError> {
         let report = self
             .db
             .doctor()
@@ -170,27 +244,10 @@ mod tests {
     #[tokio::test]
     async fn status_query_returns_zeros_on_empty_db() {
         let store = NanographStore::open_in_memory().await.unwrap();
-        let query_src = include_str!("queries/status.gq");
 
-        // On an empty DB, count queries return 0 rows (no matching bindings),
-        // so we treat num_rows == 0 as count = 0.
-        let topics = store
-            .query(query_src, "topicCount", &ParamMap::new())
-            .await
-            .unwrap();
-        assert_eq!(topics.num_rows, 0);
-
-        let sources = store
-            .query(query_src, "sourceCount", &ParamMap::new())
-            .await
-            .unwrap();
-        assert_eq!(sources.num_rows, 0);
-
-        let entries = store
-            .query(query_src, "entryCount", &ParamMap::new())
-            .await
-            .unwrap();
-        assert_eq!(entries.num_rows, 0);
+        assert_eq!(store.count_topics().await.unwrap(), 0);
+        assert_eq!(store.count_sources().await.unwrap(), 0);
+        assert_eq!(store.count_entries().await.unwrap(), 0);
     }
 
     #[tokio::test]
@@ -202,25 +259,15 @@ mod tests {
 "#;
         store.load(jsonl).await.unwrap();
 
-        let query_src = include_str!("queries/status.gq");
-
-        let topics = store
-            .query(query_src, "topicCount", &ParamMap::new())
-            .await
-            .unwrap();
-        assert_eq!(topics.rows[0]["count"], 2);
-
-        let sources = store
-            .query(query_src, "sourceCount", &ParamMap::new())
-            .await
-            .unwrap();
-        assert_eq!(sources.rows[0]["count"], 1);
+        assert_eq!(store.count_topics().await.unwrap(), 2);
+        assert_eq!(store.count_sources().await.unwrap(), 1);
+        assert_eq!(store.count_entries().await.unwrap(), 0);
     }
 
     #[tokio::test]
     async fn doctor_healthy_on_empty_db() {
         let store = NanographStore::open_in_memory().await.unwrap();
-        let report = store.doctor().await.unwrap();
+        let report = store.check_health().await.unwrap();
         assert!(report.healthy, "expected healthy report: {report:?}");
         assert!(report.issues.is_empty());
     }
@@ -245,7 +292,6 @@ mod tests {
 
         let nano = to_nano_params(&params);
         assert_eq!(nano.len(), 4);
-        // nanograph::Literal doesn't impl PartialEq, so verify via Debug
         assert!(
             format!("{:?}", nano["s"]).contains("hello"),
             "String param should contain 'hello'"
@@ -279,22 +325,16 @@ query createTopic($slug: String, $name: String) {
         assert_eq!(result.affected_nodes, 1);
 
         // Verify the node was created
-        let query_src = include_str!("queries/status.gq");
-        let topics = store
-            .query(query_src, "topicCount", &ParamMap::new())
-            .await
-            .unwrap();
-        assert_eq!(topics.rows[0]["count"], 1);
+        assert_eq!(store.count_topics().await.unwrap(), 1);
     }
 
     #[tokio::test]
     async fn mutate_on_read_query_returns_error() {
         let store = NanographStore::open_in_memory().await.unwrap();
-        let query_src = include_str!("queries/status.gq");
 
-        // Calling mutate() on a read-only query should error (returns QueryResult, not MutationResult)
+        // Calling mutate() on a read-only query should error
         let result = store
-            .mutate(query_src, "topicCount", &ParamMap::new())
+            .mutate(STATUS_QUERIES, "topicCount", &ParamMap::new())
             .await;
         assert!(result.is_err());
     }
@@ -316,12 +356,7 @@ query createTopic($slug: String, $name: String) {
         // Reopen and verify
         {
             let store = NanographStore::open(&db_path).await.unwrap();
-            let query_src = include_str!("queries/status.gq");
-            let topics = store
-                .query(query_src, "topicCount", &ParamMap::new())
-                .await
-                .unwrap();
-            assert_eq!(topics.rows[0]["count"], 1);
+            assert_eq!(store.count_topics().await.unwrap(), 1);
         }
     }
 }

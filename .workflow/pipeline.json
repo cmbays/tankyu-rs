@@ -1,0 +1,10 @@
+{
+  "id": "tankyu-rs/20260319-nanograph-integration",
+  "description": "Discover and shape nanograph v1.0.0 integration as tankyu's graph backend, replacing JsonGraphStore",
+  "template": "vertical",
+  "phaseSequence": ["discover", "shape", "plan", "build", "review", "closeout"],
+  "currentPhase": "build",
+  "status": "running",
+  "startedAt": "2026-03-19T00:00:00Z",
+  "completedAt": null
+}

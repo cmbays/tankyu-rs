@@ -11,7 +11,7 @@ When working with tankyu-core:
 2. **Serde struct convention**: `#[serde(rename_all = "camelCase")]` on all structs — the JSON files are produced by TypeScript and use camelCase
 3. **Serde enum convention**: `#[serde(rename_all = "kebab-case")]` on all enums — matches TypeScript enum serialization
 4. **Nullable vs optional fields**: TS `.nullable()` → `Option<T>` + `#[serde(default)]`; TS `.optional()` → `Option<T>` with no extra attribute
-5. **Port traits** (in `domain/ports/`) define the storage interface — never add methods to a port trait just for convenience; prefer manager-level logic over widening the trait surface
+5. **Port traits** are defined per-feature in each feature module (e.g. `CountStats` in `features/status/`, `GraphDoctor` in `features/doctor/`). Old JSON store ports remain in `domain/ports/`. Never add methods to a port trait just for convenience; prefer manager-level logic over widening the trait surface
 6. **Error handling**: all fallible operations return `Result<T, TankyuError>` using `thiserror` — never use `anyhow` in core
 7. **Feature managers** take `Arc<dyn Port>` dependencies — never take concrete store types; this keeps test stubs simple
 8. **No manager-to-manager dependencies** — if a manager needs data from another domain, take the shared port (`Arc<dyn IGraphStore>`) directly

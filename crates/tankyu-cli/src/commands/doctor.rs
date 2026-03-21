@@ -49,8 +49,8 @@ pub async fn run_standalone(data_dir: PathBuf, output: OutputMode) -> Result<()>
     if db_path.join("schema.ir.json").exists() {
         match tankyu_core::NanographStore::open(&db_path).await {
             Ok(store) => {
-                use tankyu_core::IResearchGraph;
-                match store.doctor().await {
+                use tankyu_core::GraphDoctor;
+                match store.check_health().await {
                     Ok(report) => {
                         db_healthy = report.healthy;
                         db_warnings = report.warnings;
