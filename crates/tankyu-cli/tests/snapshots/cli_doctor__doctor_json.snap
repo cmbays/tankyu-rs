@@ -4,7 +4,10 @@ expression: "serde_json::to_string_pretty(&v).unwrap()"
 ---
 {
   "data_dir": "<redacted>",
-  "entry_count": 1,
-  "issues": [],
-  "ok": true
+  "datasets_checked": 0,
+  "issues": [
+    "Database: not initialized"
+  ],
+  "ok": false,
+  "warnings": []
 }
