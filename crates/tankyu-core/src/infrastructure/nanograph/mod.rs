@@ -223,7 +223,6 @@ impl GraphDoctor for NanographStore {
             .map_err(|e| TankyuError::Store(format!("nanograph doctor: {e}")))?;
 
         Ok(DoctorReport {
-            healthy: report.healthy,
             issues: report.issues,
             warnings: report.warnings,
             datasets_checked: report.datasets_checked,
@@ -268,7 +267,7 @@ mod tests {
     async fn doctor_healthy_on_empty_db() {
         let store = NanographStore::open_in_memory().await.unwrap();
         let report = store.check_health().await.unwrap();
-        assert!(report.healthy, "expected healthy report: {report:?}");
+        assert!(report.is_healthy(), "expected healthy report: {report:?}");
         assert!(report.issues.is_empty());
     }
 

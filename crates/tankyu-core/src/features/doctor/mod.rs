@@ -7,10 +7,17 @@ use crate::shared::error::TankyuError;
 /// Database health report surfaced by `GraphDoctor::check_health()`.
 #[derive(Debug, Clone, Default)]
 pub struct DoctorReport {
-    pub healthy: bool,
     pub issues: Vec<String>,
     pub warnings: Vec<String>,
     pub datasets_checked: usize,
+}
+
+impl DoctorReport {
+    /// Returns `true` when no issues were found.
+    #[must_use]
+    pub const fn is_healthy(&self) -> bool {
+        self.issues.is_empty()
+    }
 }
 
 /// Port trait for graph database health diagnostics.
@@ -50,7 +57,7 @@ mod tests {
             Arc::new(NanographStore::open_in_memory().await.unwrap());
         let uc = DoctorUseCase::new(doctor);
         let report = uc.run().await.unwrap();
-        assert!(report.healthy);
+        assert!(report.is_healthy());
         assert!(report.issues.is_empty());
     }
 }

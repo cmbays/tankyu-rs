@@ -6,8 +6,10 @@ use crate::output::OutputMode;
 
 /// Doctor runs independently — it must not require a fully initialized `AppContext`
 /// because its job is to diagnose broken setups (missing config, missing DB, etc.).
+#[allow(clippy::too_many_lines)]
 pub async fn run_standalone(data_dir: PathBuf, output: OutputMode) -> Result<()> {
     let mut issues: Vec<String> = Vec::new();
+    let mut db_initialized = false;
     let mut db_healthy = false;
     let mut db_warnings: Vec<String> = Vec::new();
     let mut datasets_checked: usize = 0;
@@ -47,19 +49,20 @@ pub async fn run_standalone(data_dir: PathBuf, output: OutputMode) -> Result<()>
     // Check nanograph database
     let db_path = tankyu_core::shared::constants::db_path(&data_dir);
     if db_path.join("schema.ir.json").exists() {
+        db_initialized = true;
         match tankyu_core::NanographStore::open(&db_path).await {
             Ok(store) => {
                 use tankyu_core::GraphDoctor;
                 match store.check_health().await {
                     Ok(report) => {
-                        db_healthy = report.healthy;
-                        db_warnings = report.warnings;
+                        db_healthy = report.is_healthy();
                         datasets_checked = report.datasets_checked;
-                        if !report.healthy {
+                        if !db_healthy {
                             for issue in &report.issues {
                                 issues.push(format!("Database issue: {issue}"));
                             }
                         }
+                        db_warnings = report.warnings;
                     }
                     Err(e) => {
                         issues.push(format!("Database doctor error: {e}"));
@@ -94,6 +97,8 @@ pub async fn run_standalone(data_dir: PathBuf, output: OutputMode) -> Result<()>
     // Text output
     if db_healthy {
         println!("  Database: OK");
+    } else if db_initialized {
+        println!("  Database: unhealthy");
     } else {
         println!("  Database: not initialized");
     }
