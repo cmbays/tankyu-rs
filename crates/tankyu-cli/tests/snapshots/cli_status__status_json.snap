@@ -2,4 +2,8 @@
 source: crates/tankyu-cli/tests/cli_status.rs
 expression: stdout
 ---
-{"entries":1,"sources":1,"topics":1}
+{
+  "topics": 0,
+  "sources": 0,
+  "entries": 0
+}

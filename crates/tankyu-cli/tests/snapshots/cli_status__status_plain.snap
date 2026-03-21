@@ -2,12 +2,7 @@
 source: crates/tankyu-cli/tests/cli_status.rs
 expression: stdout
 ---
-+---------+-------+
-| Metric  | Count |
-+=================+
-| Topics  | 1     |
-|---------+-------|
-| Sources | 1     |
-|---------+-------|
-| Entries | 1     |
-+---------+-------+
+Research Graph Status
+  0 topics
+  0 sources
+  0 entries
