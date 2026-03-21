@@ -1,0 +1,20 @@
+query topicList() {
+    match { $t: Topic }
+    return { $t.slug, $t.name, $t.description, $t.tags, $t.createdAt, $t.updatedAt, $t.scanCount }
+}
+
+query topicGetBySlug(slug: String) {
+    match { $t: Topic { slug: $slug } }
+    return { $t.slug, $t.name, $t.description, $t.tags, $t.createdAt, $t.updatedAt, $t.scanCount }
+}
+
+query topicGetByName(name: String) {
+    match { $t: Topic { name: $name } }
+    return { $t.slug, $t.name, $t.description, $t.tags, $t.createdAt, $t.updatedAt, $t.scanCount }
+}
+
+query topicInspect(slug: String) {
+    match { $t: Topic { slug: $slug } }
+    match { $t monitors $s }
+    return { $t.slug, $t.name, $t.description, $t.tags, $t.createdAt, $t.updatedAt, $t.scanCount, $s.slug as sourceSlug, $s.name as sourceName, $s.url as sourceUrl }
+}
