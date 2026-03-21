@@ -6,5 +6,9 @@ use world::TankyuWorld;
 
 #[tokio::main]
 async fn main() {
-    TankyuWorld::run("tests/acceptance/features").await;
+    TankyuWorld::cucumber()
+        .filter_run("tests/acceptance/features", |_, _, sc| {
+            !sc.tags.iter().any(|t| t == "wip")
+        })
+        .await;
 }
