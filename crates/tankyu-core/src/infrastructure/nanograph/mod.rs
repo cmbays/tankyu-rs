@@ -288,7 +288,7 @@ mod tests {
         let mut params = ParamMap::new();
         params.insert("s".into(), ParamValue::String("hello".into()));
         params.insert("i".into(), ParamValue::Integer(42));
-        params.insert("f".into(), ParamValue::Float(3.14));
+        params.insert("f".into(), ParamValue::Float(2.72));
         params.insert("b".into(), ParamValue::Bool(true));
 
         let nano = to_nano_params(&params);
@@ -310,11 +310,11 @@ mod tests {
     #[tokio::test]
     async fn mutate_creates_node() {
         let store = NanographStore::open_in_memory().await.unwrap();
-        let mutation_src = r#"
+        let mutation_src = "
 query createTopic($slug: String, $name: String) {
     insert Topic { slug: $slug, name: $name }
 }
-"#;
+";
         let mut params = ParamMap::new();
         params.insert("slug".into(), ParamValue::String("rust".into()));
         params.insert("name".into(), ParamValue::String("Rust".into()));
