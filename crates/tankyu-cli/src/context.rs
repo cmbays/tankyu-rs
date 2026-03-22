@@ -14,7 +14,7 @@ use tankyu_core::{
         stores::{EntryStore, SourceStore, TopicStore},
     },
     shared::constants,
-    CountStats, HealthManager, NanographStore,
+    CountStats, HealthManager, JsonCountStats,
 };
 
 use crate::output::OutputMode;
@@ -53,13 +53,11 @@ impl AppContext {
         let health_source_store = Arc::clone(&source_store);
         let health_entry_store = Arc::clone(&entry_store);
 
-        // Initialize nanograph — auto-creates the DB directory on first run
-        let db_path = constants::db_path(&base);
-        let stats: Arc<dyn CountStats> = Arc::new(
-            NanographStore::open(&db_path)
-                .await
-                .with_context(|| format!("Cannot open research graph at {}", db_path.display()))?,
-        );
+        let stats: Arc<dyn CountStats> = Arc::new(JsonCountStats::new(
+            Arc::clone(&topic_store),
+            Arc::clone(&source_store),
+            Arc::clone(&entry_store),
+        ));
 
         Ok(Self {
             topic_mgr: TopicManager::new(topic_store),

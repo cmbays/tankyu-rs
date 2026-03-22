@@ -12,3 +12,4 @@ pub use features::health::{
 };
 pub use features::status::CountStats;
 pub use infrastructure::nanograph::NanographStore;
+pub use infrastructure::stores::JsonCountStats;
