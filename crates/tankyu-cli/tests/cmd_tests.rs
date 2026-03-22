@@ -12,11 +12,10 @@ fn status_json_has_counts() {
     let dir = create_fixture();
     let output = cmd(&dir).args(["--json", "status"]).output().unwrap();
     let v: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-    // Fixture has no nanograph data loaded, so counts come from the
-    // auto-initialized empty DB.
-    assert_eq!(v["topics"], 0);
-    assert_eq!(v["sources"], 0);
-    assert_eq!(v["entries"], 0);
+    // Fixture has 1 topic, 1 source, 1 entry in JSON stores.
+    assert_eq!(v["topics"], 1);
+    assert_eq!(v["sources"], 1);
+    assert_eq!(v["entries"], 1);
 }
 
 #[test]
