@@ -929,7 +929,7 @@ mod tests {
         let mgr = SourceManager::new(store, Arc::clone(&graph) as Arc<dyn IGraphStore>);
         let result = mgr.remove("edge-cleanup").await.unwrap();
         assert!(matches!(result.state, SourceState::Pruned));
-        let removed = graph.removed_ids.lock().unwrap();
+        let removed: Vec<Uuid> = graph.removed_ids.lock().unwrap().clone();
         assert_eq!(removed.len(), 2, "both edges should be removed");
         assert!(removed.contains(&edge1_id));
         assert!(removed.contains(&edge2_id));
