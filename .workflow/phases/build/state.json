@@ -1,0 +1,34 @@
+{
+  "phase": "build",
+  "status": "running",
+  "steps": [
+    {
+      "name": "S1.1",
+      "description": "Schema + IResearchGraph + NanographStore",
+      "status": "completed",
+      "startedAt": "2026-03-19T00:00:00Z",
+      "completedAt": "2026-03-21T00:00:00Z",
+      "branch": "feat/nanograph-v1-schema",
+      "notes": "Schema (.pg), IResearchGraph port, NanographStore impl, StatusUseCase, DoctorUseCase, slug_from_name, topic queries. 6+8 unit tests green."
+    },
+    {
+      "name": "S1.2",
+      "description": "Wire Status + Doctor BDD scenarios",
+      "status": "completed",
+      "startedAt": "2026-03-19T00:00:00Z",
+      "completedAt": "2026-03-21T00:00:00Z",
+      "branch": "feat/nanograph-v1-schema",
+      "notes": "Doctor 3/3 green, Status 2/3 green + 1 skipped (depends on source-topic link from S2.2). All wiring done in S1.1 commit — no separate branch needed.",
+      "bddScenarios": "5/6 passing (1 blocked on S2.2 prerequisite)"
+    },
+    {
+      "name": "S2.1",
+      "description": "Topic CRUD via nanograph",
+      "status": "pending",
+      "branch": "feat/nanograph-v2-topics",
+      "bddScenarios": 7
+    }
+  ],
+  "startedAt": "2026-03-21T00:00:00Z",
+  "completedAt": null
+}

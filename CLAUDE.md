@@ -23,6 +23,14 @@ Cargo workspace with two crates:
 Reads `~/.tankyu/` data directory produced by the TypeScript CLI.
 Set `TANKYU_DIR` env var to override the data directory (used in tests).
 
+## Language Context
+
+Language: Rust
+Framework: clap (CLI)
+Idiom reference: `~/.claude/knowledge/languages/rust/`
+
+Consult the idiom reference before making architectural decisions (trait design, module boundaries, port abstractions).
+
 ## Key Conventions
 
 - `#![forbid(unsafe_code)]` in every crate root

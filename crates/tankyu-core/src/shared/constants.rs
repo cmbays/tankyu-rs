@@ -57,6 +57,11 @@ pub fn edges_path(base: &Path) -> PathBuf {
     graph_dir(base).join("edges.json")
 }
 
+#[must_use]
+pub fn db_path(base: &Path) -> PathBuf {
+    base.join("db")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -84,5 +89,22 @@ mod tests {
         assert_eq!(graph_dir(&base), base.join("graph"));
         assert_eq!(config_path(&base), base.join("config.json"));
         assert_eq!(edges_path(&base), base.join("graph").join("edges.json"));
+    }
+
+    #[test]
+    fn db_path_derives_from_base() {
+        let base = PathBuf::from("/tmp/test");
+        assert_eq!(db_path(&base), base.join("db"));
+    }
+
+    #[test]
+    fn tankyu_dir_delegates_to_env_reader() {
+        // tankyu_dir() reads TANKYU_DIR and passes it to tankyu_dir_from_env.
+        // If TANKYU_DIR is set, the result must match; otherwise it falls back.
+        let result = tankyu_dir();
+        match std::env::var("TANKYU_DIR").ok() {
+            Some(val) => assert_eq!(result, PathBuf::from(val)),
+            None => assert_eq!(result, dirs::home_dir().unwrap().join(".tankyu")),
+        }
     }
 }

@@ -1,45 +1,122 @@
+use std::path::PathBuf;
+
 use anyhow::Result;
 
-use crate::context::AppContext;
+use crate::output::OutputMode;
 
-pub async fn run(ctx: &AppContext) -> Result<()> {
+/// Doctor runs independently — it must not require a fully initialized `AppContext`
+/// because its job is to diagnose broken setups (missing config, missing DB, etc.).
+#[allow(clippy::too_many_lines)]
+pub async fn run_standalone(data_dir: PathBuf, output: OutputMode) -> Result<()> {
     let mut issues: Vec<String> = Vec::new();
+    let mut db_initialized = false;
+    let mut db_healthy = false;
+    let mut db_warnings: Vec<String> = Vec::new();
+    let mut datasets_checked: usize = 0;
 
-    if !ctx.data_dir.exists() {
-        issues.push(format!(
-            "Data directory not found: {}",
-            ctx.data_dir.display()
-        ));
-    }
-    if ctx.config.version != 1 {
-        issues.push(format!(
-            "Unexpected config version: {} (expected 1)",
-            ctx.config.version
-        ));
-    }
-    let entry_count = ctx.entry_mgr.list_all().await?.len();
+    // Check config
+    let config_ok = {
+        let config_path = tankyu_core::shared::constants::config_path(&data_dir);
+        if config_path.exists() {
+            match tokio::fs::read(&config_path).await {
+                Ok(bytes) => {
+                    match serde_json::from_slice::<tankyu_core::domain::types::TankyuConfig>(&bytes)
+                    {
+                        Ok(cfg) if cfg.version == 1 => true,
+                        Ok(cfg) => {
+                            issues.push(format!(
+                                "Unexpected config version: {} (expected 1)",
+                                cfg.version
+                            ));
+                            false
+                        }
+                        Err(e) => {
+                            issues.push(format!("Config parse error: {e}"));
+                            false
+                        }
+                    }
+                }
+                Err(e) => {
+                    issues.push(format!("Config read error: {e}"));
+                    false
+                }
+            }
+        } else {
+            issues.push("Config: not found".to_string());
+            false
+        }
+    };
 
-    if ctx.output.is_json() {
+    // Check nanograph database
+    let db_path = tankyu_core::shared::constants::db_path(&data_dir);
+    if db_path.join("schema.ir.json").exists() {
+        db_initialized = true;
+        match tankyu_core::NanographStore::open(&db_path).await {
+            Ok(store) => {
+                use tankyu_core::GraphDoctor;
+                match store.check_health().await {
+                    Ok(report) => {
+                        db_healthy = report.is_healthy();
+                        datasets_checked = report.datasets_checked;
+                        if !db_healthy {
+                            for issue in &report.issues {
+                                issues.push(format!("Database issue: {issue}"));
+                            }
+                        }
+                        db_warnings = report.warnings;
+                    }
+                    Err(e) => {
+                        issues.push(format!("Database doctor error: {e}"));
+                    }
+                }
+            }
+            Err(e) => {
+                issues.push(format!("Database open error: {e}"));
+            }
+        }
+    } else {
+        issues.push("Database: not initialized".to_string());
+    }
+
+    if output.is_json() {
         println!(
             "{}",
             serde_json::json!({
                 "ok": issues.is_empty(),
                 "issues": issues,
-                "data_dir": ctx.data_dir.to_string_lossy(),
-                "entry_count": entry_count
+                "warnings": db_warnings,
+                "data_dir": data_dir.to_string_lossy(),
+                "datasets_checked": datasets_checked
             })
         );
+        if !issues.is_empty() {
+            anyhow::bail!("{} issue(s) found", issues.len());
+        }
         return Ok(());
     }
 
-    if issues.is_empty() {
-        println!("✓ All checks passed");
-        println!("  Data dir: {}", ctx.data_dir.display());
-        println!("  Entries:  {entry_count}");
+    // Text output
+    if db_healthy {
+        println!("  Database: OK");
+    } else if db_initialized {
+        println!("  Database: unhealthy");
     } else {
-        for issue in &issues {
-            eprintln!("  ✗ {issue}");
-        }
+        println!("  Database: not initialized");
+    }
+
+    if config_ok {
+        println!("  Config: OK");
+    } else {
+        println!("  Config: not found");
+    }
+
+    for w in &db_warnings {
+        println!("  ⚠ {w}");
+    }
+
+    if issues.is_empty() {
+        println!("  Data dir: {}", data_dir.display());
+    } else {
         anyhow::bail!("{} issue(s) found", issues.len());
     }
     Ok(())

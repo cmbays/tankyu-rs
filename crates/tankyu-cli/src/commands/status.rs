@@ -2,28 +2,25 @@ use anyhow::Result;
 
 use crate::context::AppContext;
 
+fn pluralize(count: usize, singular: &str, plural: &str) -> String {
+    if count == 1 {
+        format!("{count} {singular}")
+    } else {
+        format!("{count} {plural}")
+    }
+}
+
 pub async fn run(ctx: &AppContext) -> Result<()> {
-    let topics = ctx.topic_mgr.list_all().await?;
-    let sources = ctx.source_mgr.list_all().await?;
-    let entries = ctx.entry_mgr.list_all().await?;
+    let report = ctx.status_uc.run().await?;
 
     if ctx.output.is_json() {
-        println!(
-            "{}",
-            serde_json::json!({
-                "topics": topics.len(),
-                "sources": sources.len(),
-                "entries": entries.len()
-            })
-        );
+        println!("{}", serde_json::to_string_pretty(&report)?);
         return Ok(());
     }
 
-    let mut table = comfy_table::Table::new();
-    table.set_header(["Metric", "Count"]);
-    table.add_row(["Topics", &topics.len().to_string()]);
-    table.add_row(["Sources", &sources.len().to_string()]);
-    table.add_row(["Entries", &entries.len().to_string()]);
-    println!("{table}");
+    println!("Research Graph Status");
+    println!("  {}", pluralize(report.topics, "topic", "topics"));
+    println!("  {}", pluralize(report.sources, "source", "sources"));
+    println!("  {}", pluralize(report.entries, "entry", "entries"));
     Ok(())
 }

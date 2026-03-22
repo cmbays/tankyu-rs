@@ -2,6 +2,5 @@
 source: crates/tankyu-cli/tests/cli_doctor.rs
 expression: stable
 ---
-✓ All checks passed
-  Data dir: <redacted>
-  Entries:  1
+  Database: not initialized
+  Config: OK

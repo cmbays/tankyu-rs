@@ -1,0 +1,32 @@
+{
+  "phase": "discover",
+  "status": "completed",
+  "steps": [
+    {
+      "name": "existing-decisions",
+      "status": "completed",
+      "completedAt": "2026-03-19T00:00:00Z"
+    },
+    {
+      "name": "framing",
+      "status": "completed",
+      "completedAt": "2026-03-19T00:00:00Z",
+      "artifact": "~/Github/ops/workspace/tankyu-rs/tankyu-rs/20260319-nanograph-integration/frame.md"
+    },
+    {
+      "name": "research",
+      "status": "completed",
+      "completedAt": "2026-03-19T00:00:00Z",
+      "notes": "Spikes: kebab-case enums + UUID @key confirmed. Binary 1.4→58MB. Nullability/concurrency/negation/mutations/migration all tested. `id` field naming bug found and worked around (use `slug`).",
+      "artifact": "~/Github/ops/research/tankyu-rs/nanograph-v1.0.0-capabilities.md"
+    },
+    {
+      "name": "interrogation",
+      "status": "completed",
+      "completedAt": "2026-03-19T00:00:00Z",
+      "artifact": "~/Github/ops/workspace/tankyu-rs/tankyu-rs/20260319-nanograph-integration/requirements.md"
+    }
+  ],
+  "startedAt": "2026-03-19T00:00:00Z",
+  "completedAt": "2026-03-19T00:00:00Z"
+}

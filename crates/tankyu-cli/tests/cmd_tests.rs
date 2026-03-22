@@ -12,9 +12,11 @@ fn status_json_has_counts() {
     let dir = create_fixture();
     let output = cmd(&dir).args(["--json", "status"]).output().unwrap();
     let v: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-    assert_eq!(v["topics"], 1);
-    assert_eq!(v["sources"], 1);
-    assert_eq!(v["entries"], 1);
+    // Fixture has no nanograph data loaded, so counts come from the
+    // auto-initialized empty DB.
+    assert_eq!(v["topics"], 0);
+    assert_eq!(v["sources"], 0);
+    assert_eq!(v["entries"], 0);
 }
 
 #[test]
@@ -54,9 +56,10 @@ fn config_show_exits_success() {
 }
 
 #[test]
-fn doctor_exits_success() {
+fn doctor_exits_failure_without_db() {
+    // Fixture has no nanograph DB, so doctor reports "not initialized"
     let dir = create_fixture();
-    cmd(&dir).arg("doctor").assert().success();
+    cmd(&dir).arg("doctor").assert().failure();
 }
 
 #[test]

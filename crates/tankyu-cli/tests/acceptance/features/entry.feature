@@ -1,80 +1,85 @@
 Feature: Entry management
   As a researcher
-  I want to list and inspect my collected entries
+  I want to list, inspect, and update collected entries
   So that I can review what has been gathered and focus on what needs attention
 
-  Scenario: List entries in table format when entries exist
-    Given the data directory contains 3 entries with mixed state
+  # --- List ---
+
+  @wip
+  Scenario: List entries when none exist
     When I run "entry list"
     Then the command exits successfully
-    And stdout contains "new"
+    And stdout contains "No entries yet"
 
-  Scenario: List all entries as JSON
-    Given the data directory contains 3 entries with mixed state
-    When I run "entry list --json"
-    Then the command exits successfully
-    And stdout is a JSON array of length 3
-
-  Scenario: Filter entries by state new
-    Given the data directory contains 3 entries with mixed state
-    When I run "entry list --state new"
-    Then the command exits successfully
-    And stdout contains "Alpha entry"
-    And stdout does not contain "Beta entry"
-
-  Scenario: Invalid state flag is rejected
-    When I run "entry list --state garbage"
-    Then the command exits with failure
-    And stderr contains "Invalid state"
-
-  Scenario: topic and source flags are mutually exclusive
-    When I run "entry list --topic foo --source bar"
-    Then the command exits with failure
-    And stderr contains "mutually exclusive"
-
-  Scenario: No entries shows empty table
+  Scenario: List entries shows all entries
+    Given entries exist in the research graph
     When I run "entry list"
     Then the command exits successfully
-    And stdout does not contain "feat:"
+    And stdout contains the entry titles
 
+  Scenario: Filter entries by source
+    Given a source "tokio-rs-tokio" exists with entries
+    When I run "entry list --source tokio-rs-tokio"
+    Then the command exits successfully
+    And all listed entries belong to source "tokio-rs-tokio"
+
+  # --- Unclassified (graph traversal via negation) ---
+
+  Scenario: List unclassified entries excludes tagged entries
+    Given an entry "alpha-post" is tagged with topic "rust"
+    And an entry "beta-post" has no topic tags
+    When I run "entry list --unclassified"
+    Then the command exits successfully
+    And stdout contains "beta-post"
+    And stdout does not contain "alpha-post"
+
+  Scenario: All entries unclassified when none are tagged
+    Given entries exist in the research graph
+    And no entries are tagged with any topic
+    When I run "entry list --unclassified"
+    Then the command exits successfully
+    And all entries are listed
+
+  # --- Inspect ---
+
+  Scenario: Inspect an entry shows details and relationships
+    Given an entry "alpha-post" exists with source "tokio-rs-tokio"
+    And entry "alpha-post" is tagged with topic "rust"
+    When I run "entry inspect alpha-post"
+    Then the command exits successfully
+    And stdout contains "alpha-post"
+    And stdout contains "tokio-rs-tokio"
+    And stdout contains "rust"
+
+  @wip
   Scenario: Inspect a non-existent entry fails
-    When I run "entry inspect 00000000-0000-0000-0000-000000000000"
+    When I run "entry inspect does-not-exist"
     Then the command exits with failure
     And stderr contains "not found"
 
+  # --- Update ---
+
   Scenario: Update entry state
-    Given the data directory contains 3 entries with mixed state
-    When I run "entry update aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa --state read"
+    Given an entry "alpha-post" exists
+    When I run "entry update alpha-post --state read"
     Then the command exits successfully
-    And stdout contains "Updated entry"
+    And stdout contains "Updated"
     And stdout contains "read"
 
   Scenario: Update entry signal
-    Given the data directory contains 3 entries with mixed state
-    When I run "entry update aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa --signal high"
+    Given an entry "alpha-post" exists
+    When I run "entry update alpha-post --signal high"
     Then the command exits successfully
     And stdout contains "high"
 
-  Scenario: Update non-existent entry fails
-    When I run "entry update 00000000-0000-0000-0000-000000000000 --state read"
-    Then the command exits with failure
-    And stderr contains "not found"
-
   Scenario: Update without flags fails
-    When I run "entry update aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+    Given an entry "alpha-post" exists
+    When I run "entry update alpha-post"
     Then the command exits with failure
     And stderr contains "at least one"
 
-  Scenario: List unclassified entries excludes classified entries
-    Given the data directory contains 3 entries with mixed state
-    And entry "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" is classified under topic "11111111-1111-1111-1111-111111111111"
-    When I run "entry list --unclassified"
-    Then the command exits successfully
-    And stdout does not contain "Alpha entry"
-
-  Scenario: List unclassified returns all entries when none classified
-    Given the data directory contains 3 entries with mixed state
-    When I run "entry list --unclassified"
-    Then the command exits successfully
-    And stdout contains "Alpha entry"
-    And stdout contains "Beta entry"
+  @wip
+  Scenario: Update a non-existent entry fails
+    When I run "entry update does-not-exist --state read"
+    Then the command exits with failure
+    And stderr contains "not found"

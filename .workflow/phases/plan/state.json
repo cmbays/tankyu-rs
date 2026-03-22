@@ -1,0 +1,15 @@
+{
+  "phase": "plan",
+  "status": "completed",
+  "steps": [
+    {
+      "name": "design-doc",
+      "status": "completed",
+      "startedAt": "2026-03-19T00:00:00Z",
+      "completedAt": "2026-03-20T00:00:00Z",
+      "artifact": "~/Github/ops/workspace/tankyu-rs/tankyu-rs/20260319-nanograph-integration/impl-plan.md"
+    }
+  ],
+  "startedAt": "2026-03-19T00:00:00Z",
+  "completedAt": "2026-03-20T00:00:00Z"
+}
