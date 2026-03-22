@@ -60,7 +60,7 @@ impl AppContext {
         ));
 
         Ok(Self {
-            topic_mgr: TopicManager::new(topic_store),
+            topic_mgr: TopicManager::new(topic_store, Arc::clone(&graph_store)),
             source_mgr: SourceManager::new(source_store, Arc::clone(&graph_store)),
             entry_mgr: EntryManager::new(entry_store, Arc::clone(&graph_store)),
             health_mgr: HealthManager::new(health_source_store, health_entry_store),
