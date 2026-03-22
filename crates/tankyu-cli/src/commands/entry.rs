@@ -1,4 +1,5 @@
 use anyhow::Result;
+use tracing::warn;
 use uuid::Uuid;
 
 use tankyu_core::domain::types::{EntryState, EntryType, Signal};
@@ -187,8 +188,8 @@ pub async fn inspect(ctx: &AppContext, id: &str) -> Result<()> {
     let source_name = match ctx.source_mgr.get_by_id(e.source_id).await {
         Ok(Some(s)) => s.name,
         Ok(None) => e.source_id.to_string(),
-        Err(_) => {
-            eprintln!("warning: could not look up source {}", e.source_id);
+        Err(err) => {
+            warn!(source_id = %e.source_id, error = %err, "could not look up source");
             e.source_id.to_string()
         }
     };
