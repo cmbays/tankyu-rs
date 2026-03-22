@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use chrono::Utc;
+use tracing::warn;
 use uuid::Uuid;
 
 use crate::domain::{
@@ -72,9 +73,32 @@ impl TopicManager {
             match self.store.get(id).await? {
                 Some(t) => topics.push(t),
                 None => {
-                    eprintln!(
-                        "warning: orphaned edge references topic {id} which no longer exists"
-                    );
+                    warn!(%id, "orphaned edge references topic that no longer exists");
+                }
+            }
+        }
+        Ok(topics)
+    }
+
+    /// List topics that an entry is tagged with (via `TaggedWith` edges in the graph).
+    ///
+    /// Symmetric with `list_by_source` but follows `TaggedWith` edges from entries.
+    ///
+    /// # Errors
+    /// Returns an error if the store or graph fails.
+    pub async fn list_by_entry(&self, entry_id: Uuid) -> Result<Vec<Topic>> {
+        let edges = self.graph.get_edges_by_node(entry_id).await?;
+        let topic_ids: Vec<Uuid> = edges
+            .into_iter()
+            .filter(|e| e.from_id == entry_id && e.edge_type == EdgeType::TaggedWith)
+            .map(|e| e.to_id)
+            .collect();
+        let mut topics = Vec::with_capacity(topic_ids.len());
+        for id in topic_ids {
+            match self.store.get(id).await? {
+                Some(t) => topics.push(t),
+                None => {
+                    warn!(%id, "orphaned edge references topic that no longer exists");
                 }
             }
         }
@@ -369,6 +393,92 @@ mod tests {
         // Store has no topics — the edge references a topic that doesn't exist
         let mgr = make_mgr(vec![], vec![edge]);
         let result = mgr.list_by_source(source_id).await.unwrap();
+        assert!(
+            result.is_empty(),
+            "orphaned edge should be skipped, not cause a panic"
+        );
+    }
+
+    // ── list_by_entry() tests ─────────────────────────────────────────
+
+    fn make_tagged_with_edge(entry_id: Uuid, topic_id: Uuid) -> Edge {
+        Edge {
+            id: Uuid::new_v4(),
+            from_id: entry_id,
+            from_type: NodeType::Entry,
+            to_id: topic_id,
+            to_type: NodeType::Topic,
+            edge_type: EdgeType::TaggedWith,
+            reason: "test".to_string(),
+            score: None,
+            method: None,
+            created_at: Utc::now(),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_list_by_entry_returns_tagged_topics() {
+        let topic = make_topic("rust");
+        let topic_id = topic.id;
+        let entry_id = Uuid::new_v4();
+        let edge = make_tagged_with_edge(entry_id, topic_id);
+        let mgr = make_mgr(vec![topic], vec![edge]);
+        let result = mgr.list_by_entry(entry_id).await.unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "rust");
+    }
+
+    #[tokio::test]
+    async fn test_list_by_entry_ignores_non_tagged_with_edges() {
+        let topic = make_topic("rust");
+        let topic_id = topic.id;
+        let entry_id = Uuid::new_v4();
+        let edge = Edge {
+            id: Uuid::new_v4(),
+            from_id: entry_id,
+            from_type: NodeType::Entry,
+            to_id: topic_id,
+            to_type: NodeType::Topic,
+            edge_type: EdgeType::Produced,
+            reason: "test".to_string(),
+            score: None,
+            method: None,
+            created_at: Utc::now(),
+        };
+        let mgr = make_mgr(vec![topic], vec![edge]);
+        let result = mgr.list_by_entry(entry_id).await.unwrap();
+        assert!(
+            result.is_empty(),
+            "Produced edge should not be treated as TaggedWith"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_list_by_entry_empty_when_no_edges() {
+        let mgr = make_mgr(vec![], vec![]);
+        let result = mgr.list_by_entry(Uuid::new_v4()).await.unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_list_by_entry_ignores_edges_to_different_entry() {
+        let topic = make_topic("rust");
+        let topic_id = topic.id;
+        let other_entry_id = Uuid::new_v4();
+        let target_entry_id = Uuid::new_v4();
+        let edge = make_tagged_with_edge(other_entry_id, topic_id);
+        let mgr = make_mgr(vec![topic], vec![edge]);
+        let result = mgr.list_by_entry(target_entry_id).await.unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_list_by_entry_skips_orphaned_topic() {
+        let entry_id = Uuid::new_v4();
+        let nonexistent_topic_id = Uuid::new_v4();
+        let edge = make_tagged_with_edge(entry_id, nonexistent_topic_id);
+        let mgr = make_mgr(vec![], vec![edge]);
+        let result = mgr.list_by_entry(entry_id).await.unwrap();
         assert!(
             result.is_empty(),
             "orphaned edge should be skipped, not cause a panic"

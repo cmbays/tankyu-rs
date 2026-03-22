@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use chrono::Utc;
+use tracing::warn;
 use uuid::Uuid;
 
 use crate::domain::{
@@ -68,6 +69,14 @@ impl SourceManager {
         Ok(all.into_iter().find(|s| s.name == name))
     }
 
+    /// Look up a source by ID. Returns `None` if not found.
+    ///
+    /// # Errors
+    /// Returns an error if the store fails.
+    pub async fn get_by_id(&self, id: Uuid) -> Result<Option<Source>> {
+        self.store.get(id).await
+    }
+
     /// Find a source by its URL (exact match).
     ///
     /// Returns `None` if no source with that URL exists.
@@ -93,9 +102,9 @@ impl SourceManager {
         for id in source_ids {
             match self.store.get(id).await? {
                 Some(s) => sources.push(s),
-                None => eprintln!(
-                    "warning: orphaned edge references source {id} which no longer exists"
-                ),
+                None => {
+                    warn!(%id, "orphaned edge references source that no longer exists");
+                }
             }
         }
         Ok(sources)
@@ -195,7 +204,7 @@ impl SourceManager {
         // Then clean up edges — orphaned edges are less harmful than lost edges.
         for edge in edges {
             if let Err(e) = self.graph.remove_edge(edge.id).await {
-                eprintln!("warning: failed to remove edge {}: {e}", edge.id);
+                warn!(edge_id = %edge.id, error = %e, "failed to remove edge during source cleanup");
             }
         }
         Ok(updated)
