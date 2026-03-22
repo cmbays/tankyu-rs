@@ -136,6 +136,29 @@ impl TankyuWorld {
         );
     }
 
+    pub fn write_monitors_edge(&self, topic_id: &str, source_id: &str) {
+        use uuid::Uuid;
+        let edge_id = Uuid::new_v4().to_string();
+        let edges_path = self.data_dir.path().join("graph/edges.json");
+        let current: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&edges_path).unwrap()).unwrap();
+        let mut edges = current["edges"].as_array().cloned().unwrap_or_default();
+        edges.push(serde_json::json!({
+            "id": edge_id,
+            "fromId": topic_id,
+            "fromType": "topic",
+            "toId": source_id,
+            "toType": "source",
+            "edgeType": "monitors",
+            "reason": "test monitors edge",
+            "createdAt": "2025-01-01T00:00:00Z"
+        }));
+        write_json(
+            &edges_path,
+            &serde_json::json!({ "version": 1, "edges": edges }),
+        );
+    }
+
     pub fn write_tagged_with_edge(&self, entry_id: &str, topic_id: &str) {
         use uuid::Uuid;
         let edge_id = Uuid::new_v4().to_string();

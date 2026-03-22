@@ -2,5 +2,5 @@
 source: crates/tankyu-cli/tests/cli_source.rs
 expression: stable
 ---
-Added source: tokio-rs/tokio (github-repo)
+Added source: tokio-rs-tokio (github-repo)
   URL: https://github.com/tokio-rs/tokio

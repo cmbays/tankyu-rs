@@ -2,7 +2,7 @@
 source: crates/tankyu-cli/tests/cli_source.rs
 expression: "String::from_utf8(out.stdout).unwrap()"
 ---
-Name:         rust-lang/rust
+Name:         rust-lang-rust
 Type:         github-repo
 State:        active
 Role:         —

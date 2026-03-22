@@ -3,4 +3,5 @@ source: crates/tankyu-cli/tests/cli_topic.rs
 expression: stable
 ---
 Created topic: Systems
+  slug: Systems
   Tags: rust, c, cpp

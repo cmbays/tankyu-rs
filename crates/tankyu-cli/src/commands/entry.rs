@@ -143,6 +143,11 @@ pub async fn list(
         return Ok(());
     }
 
+    if entries.is_empty() {
+        println!("No entries yet. Entries appear after scanning sources.");
+        return Ok(());
+    }
+
     let mut table = comfy_table::Table::new();
     table.set_header(["ID", "Type", "State", "Signal", "Title", "Scanned"]);
     for e in &entries {
@@ -166,7 +171,8 @@ pub async fn list(
 }
 
 pub async fn inspect(ctx: &AppContext, id: &str) -> Result<()> {
-    let uuid = Uuid::parse_str(id).map_err(|_| anyhow::anyhow!("Invalid UUID: {id}"))?;
+    let uuid = Uuid::parse_str(id)
+        .map_err(|_| anyhow::anyhow!("'{id}' is not a valid entry ID (expected a UUID)"))?;
     let e = ctx
         .entry_mgr
         .get(uuid)
@@ -201,7 +207,8 @@ pub async fn update(
     if state.is_none() && signal.is_none() {
         anyhow::bail!("At least one of --state or --signal must be provided");
     }
-    let uuid = Uuid::parse_str(id).map_err(|_| anyhow::anyhow!("Invalid UUID: {id}"))?;
+    let uuid = Uuid::parse_str(id)
+        .map_err(|_| anyhow::anyhow!("'{id}' is not a valid entry ID (expected a UUID)"))?;
     let state_val = state.map(parse_state).transpose()?;
     let signal_val = signal.map(parse_signal).transpose()?;
     let entry = ctx

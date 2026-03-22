@@ -3,3 +3,4 @@ source: crates/tankyu-cli/tests/cli_topic.rs
 expression: stable
 ---
 Created topic: New-Topic
+  slug: New-Topic

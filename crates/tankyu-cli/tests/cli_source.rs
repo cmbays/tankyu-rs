@@ -27,7 +27,7 @@ fn source_inspect_plain() {
     let dir = create_fixture();
     let out = cmd(&dir)
         .env("NO_COLOR", "1")
-        .args(["source", "inspect", "rust-lang/rust"])
+        .args(["source", "inspect", "rust-lang-rust"])
         .output()
         .unwrap();
     assert!(
@@ -42,12 +42,12 @@ fn source_inspect_plain() {
 fn source_inspect_json() {
     let dir = create_fixture();
     let out = cmd(&dir)
-        .args(["--json", "source", "inspect", "rust-lang/rust"])
+        .args(["--json", "source", "inspect", "rust-lang-rust"])
         .output()
         .unwrap();
     assert!(out.status.success());
     let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
-    assert_eq!(v["name"], "rust-lang/rust");
+    assert_eq!(v["name"], "rust-lang-rust");
     insta::assert_snapshot!(String::from_utf8(out.stdout).unwrap());
 }
 
@@ -65,7 +65,7 @@ fn source_add_plain() {
         String::from_utf8_lossy(&out.stderr)
     );
     let stdout = String::from_utf8(out.stdout).unwrap();
-    assert!(stdout.contains("tokio-rs/tokio"));
+    assert!(stdout.contains("tokio-rs-tokio"));
     // Dynamic ID — strip the ID line before snapshotting
     let stable: String = stdout
         .lines()
