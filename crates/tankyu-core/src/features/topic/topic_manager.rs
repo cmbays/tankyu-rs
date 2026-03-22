@@ -34,6 +34,14 @@ impl TopicManager {
         self.store.list().await
     }
 
+    /// Look up a topic by ID. Returns `None` if not found.
+    ///
+    /// # Errors
+    /// Returns an error if the store fails.
+    pub async fn get_by_id(&self, id: Uuid) -> Result<Option<Topic>> {
+        self.store.get(id).await
+    }
+
     /// Look up a topic by name. Returns `None` if not found.
     ///
     /// # Errors
@@ -131,6 +139,25 @@ mod tests {
         });
         let mgr = TopicManager::new(store);
         assert_eq!(mgr.list_all().await.unwrap().len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_get_by_id_found() {
+        let t = make_topic("by-id");
+        let id = t.id;
+        let store = Arc::new(StubTopicStore {
+            topics: vec![t],
+        });
+        let mgr = TopicManager::new(store);
+        let result = mgr.get_by_id(id).await.unwrap();
+        assert_eq!(result.unwrap().name, "by-id");
+    }
+
+    #[tokio::test]
+    async fn test_get_by_id_not_found() {
+        let store = Arc::new(StubTopicStore { topics: vec![] });
+        let mgr = TopicManager::new(store);
+        assert!(mgr.get_by_id(Uuid::new_v4()).await.unwrap().is_none());
     }
 
     #[tokio::test]

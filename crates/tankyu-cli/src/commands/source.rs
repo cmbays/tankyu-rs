@@ -1,8 +1,6 @@
 use anyhow::Result;
-use tankyu_core::{
-    domain::types::{SourceRole, SourceState, SourceType},
-    features::source::source_manager::AddSourceInput,
-};
+use tankyu_core::domain::types::{EdgeType, SourceRole, SourceState, SourceType};
+use tankyu_core::features::source::source_manager::AddSourceInput;
 
 use crate::context::AppContext;
 
@@ -137,6 +135,25 @@ pub async fn inspect(ctx: &AppContext, name: &str) -> Result<()> {
     );
     println!("Last checked: {last_checked}");
     println!("Created:      {}", s.created_at.format("%Y-%m-%d"));
+
+    // Show related topics (via Monitors edges pointing to this source).
+    let edges = ctx.graph_store.get_edges_by_node(s.id).await?;
+    let topic_ids: Vec<_> = edges
+        .iter()
+        .filter(|e| e.to_id == s.id && e.edge_type == EdgeType::Monitors)
+        .map(|e| e.from_id)
+        .collect();
+    if !topic_ids.is_empty() {
+        let mut names = Vec::new();
+        for tid in topic_ids {
+            if let Some(t) = ctx.topic_mgr.get_by_id(tid).await? {
+                names.push(t.name);
+            }
+        }
+        if !names.is_empty() {
+            println!("Topics:       {}", names.join(", "));
+        }
+    }
     Ok(())
 }
 

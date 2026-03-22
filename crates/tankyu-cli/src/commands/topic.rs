@@ -36,6 +36,15 @@ pub async fn inspect(ctx: &AppContext, name: &str) -> Result<()> {
     println!("Tags:        {}", t.tags.join(", "));
     println!("Scan count:  {}", t.scan_count);
     println!("Created:     {}", t.created_at.format("%Y-%m-%d"));
+
+    // Show related sources (via Monitors edges from this topic).
+    let sources = ctx.source_mgr.list_by_topic(t.id).await?;
+    if !sources.is_empty() {
+        println!("Sources:");
+        for s in &sources {
+            println!("  - {} ({})", s.name, s.url);
+        }
+    }
     Ok(())
 }
 

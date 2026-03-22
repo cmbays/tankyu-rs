@@ -163,7 +163,8 @@ impl SourceManager {
         Ok(source)
     }
 
-    /// Mark a source as pruned by name. Returns the updated source.
+    /// Mark a source as pruned by name and remove its graph edges.
+    /// Returns the updated source.
     ///
     /// # Errors
     /// Returns `TankyuError::NotFound` if no source with this name exists.
@@ -172,6 +173,11 @@ impl SourceManager {
             .get_by_name(name)
             .await?
             .ok_or_else(|| TankyuError::NotFound(format!("source '{name}'")))?;
+        // Remove all edges connected to this source.
+        let edges = self.graph.get_edges_by_node(source.id).await?;
+        for edge in edges {
+            self.graph.remove_edge(edge.id).await?;
+        }
         self.store
             .update(
                 source.id,
