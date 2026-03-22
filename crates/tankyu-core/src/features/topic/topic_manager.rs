@@ -71,7 +71,9 @@ impl TopicManager {
         for id in topic_ids {
             match self.store.get(id).await? {
                 Some(t) => topics.push(t),
-                None => eprintln!("warning: orphaned edge references topic {id} which no longer exists"),
+                None => {
+                    eprintln!("warning: orphaned edge references topic {id} which no longer exists")
+                }
             }
         }
         Ok(topics)
@@ -310,7 +312,10 @@ mod tests {
         };
         let mgr = make_mgr(vec![topic], vec![edge]);
         let result = mgr.list_by_source(source_id).await.unwrap();
-        assert!(result.is_empty(), "TaggedWith should not be treated as Monitors");
+        assert!(
+            result.is_empty(),
+            "TaggedWith should not be treated as Monitors"
+        );
     }
 
     #[tokio::test]

@@ -93,7 +93,9 @@ impl SourceManager {
         for id in source_ids {
             match self.store.get(id).await? {
                 Some(s) => sources.push(s),
-                None => eprintln!("warning: orphaned edge references source {id} which no longer exists"),
+                None => eprintln!(
+                    "warning: orphaned edge references source {id} which no longer exists"
+                ),
             }
         }
         Ok(sources)

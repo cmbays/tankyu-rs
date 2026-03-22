@@ -132,72 +132,128 @@ mod tests {
 
     #[async_trait]
     impl ITopicStore for OkTopicStore {
-        async fn create(&self, _t: Topic) -> Result<()> { Ok(()) }
-        async fn get(&self, _id: Uuid) -> Result<Option<Topic>> { Ok(None) }
-        async fn get_by_name(&self, _n: &str) -> Result<Option<Topic>> { Ok(None) }
+        async fn create(&self, _t: Topic) -> Result<()> {
+            Ok(())
+        }
+        async fn get(&self, _id: Uuid) -> Result<Option<Topic>> {
+            Ok(None)
+        }
+        async fn get_by_name(&self, _n: &str) -> Result<Option<Topic>> {
+            Ok(None)
+        }
         async fn list(&self) -> Result<Vec<Topic>> {
             Ok((0..self.0).map(|_| make_topic()).collect())
         }
-        async fn update(&self, _id: Uuid, _u: TopicUpdate) -> Result<Topic> { unimplemented!() }
+        async fn update(&self, _id: Uuid, _u: TopicUpdate) -> Result<Topic> {
+            unimplemented!()
+        }
     }
 
     #[async_trait]
     impl ISourceStore for OkSourceStore {
-        async fn create(&self, _s: Source) -> Result<()> { Ok(()) }
-        async fn get(&self, _id: Uuid) -> Result<Option<Source>> { Ok(None) }
-        async fn get_by_url(&self, _u: &str) -> Result<Option<Source>> { Ok(None) }
+        async fn create(&self, _s: Source) -> Result<()> {
+            Ok(())
+        }
+        async fn get(&self, _id: Uuid) -> Result<Option<Source>> {
+            Ok(None)
+        }
+        async fn get_by_url(&self, _u: &str) -> Result<Option<Source>> {
+            Ok(None)
+        }
         async fn list(&self) -> Result<Vec<Source>> {
             Ok((0..self.0).map(|_| make_source()).collect())
         }
-        async fn update(&self, _id: Uuid, _u: SourceUpdate) -> Result<Source> { unimplemented!() }
+        async fn update(&self, _id: Uuid, _u: SourceUpdate) -> Result<Source> {
+            unimplemented!()
+        }
     }
 
     #[async_trait]
     impl IEntryStore for OkEntryStore {
-        async fn create(&self, _e: Entry) -> Result<()> { Ok(()) }
-        async fn get(&self, _id: Uuid) -> Result<Option<Entry>> { Ok(None) }
-        async fn get_by_url(&self, _u: &str) -> Result<Option<Entry>> { Ok(None) }
-        async fn get_by_content_hash(&self, _h: &str) -> Result<Option<Entry>> { Ok(None) }
-        async fn list_by_source(&self, _id: Uuid) -> Result<Vec<Entry>> { Ok(vec![]) }
+        async fn create(&self, _e: Entry) -> Result<()> {
+            Ok(())
+        }
+        async fn get(&self, _id: Uuid) -> Result<Option<Entry>> {
+            Ok(None)
+        }
+        async fn get_by_url(&self, _u: &str) -> Result<Option<Entry>> {
+            Ok(None)
+        }
+        async fn get_by_content_hash(&self, _h: &str) -> Result<Option<Entry>> {
+            Ok(None)
+        }
+        async fn list_by_source(&self, _id: Uuid) -> Result<Vec<Entry>> {
+            Ok(vec![])
+        }
         async fn list(&self) -> Result<Vec<Entry>> {
             Ok((0..self.0).map(|_| make_entry()).collect())
         }
-        async fn update(&self, _id: Uuid, _u: EntryUpdate) -> Result<Entry> { unimplemented!() }
+        async fn update(&self, _id: Uuid, _u: EntryUpdate) -> Result<Entry> {
+            unimplemented!()
+        }
     }
 
     #[async_trait]
     impl ITopicStore for FailingTopicStore {
-        async fn create(&self, _t: Topic) -> Result<()> { Ok(()) }
-        async fn get(&self, _id: Uuid) -> Result<Option<Topic>> { Ok(None) }
-        async fn get_by_name(&self, _n: &str) -> Result<Option<Topic>> { Ok(None) }
+        async fn create(&self, _t: Topic) -> Result<()> {
+            Ok(())
+        }
+        async fn get(&self, _id: Uuid) -> Result<Option<Topic>> {
+            Ok(None)
+        }
+        async fn get_by_name(&self, _n: &str) -> Result<Option<Topic>> {
+            Ok(None)
+        }
         async fn list(&self) -> Result<Vec<Topic>> {
             Err(anyhow::anyhow!("disk read failed"))
         }
-        async fn update(&self, _id: Uuid, _u: TopicUpdate) -> Result<Topic> { unimplemented!() }
+        async fn update(&self, _id: Uuid, _u: TopicUpdate) -> Result<Topic> {
+            unimplemented!()
+        }
     }
 
     #[async_trait]
     impl ISourceStore for FailingSourceStore {
-        async fn create(&self, _s: Source) -> Result<()> { Ok(()) }
-        async fn get(&self, _id: Uuid) -> Result<Option<Source>> { Ok(None) }
-        async fn get_by_url(&self, _u: &str) -> Result<Option<Source>> { Ok(None) }
+        async fn create(&self, _s: Source) -> Result<()> {
+            Ok(())
+        }
+        async fn get(&self, _id: Uuid) -> Result<Option<Source>> {
+            Ok(None)
+        }
+        async fn get_by_url(&self, _u: &str) -> Result<Option<Source>> {
+            Ok(None)
+        }
         async fn list(&self) -> Result<Vec<Source>> {
             Err(anyhow::anyhow!("disk read failed"))
         }
-        async fn update(&self, _id: Uuid, _u: SourceUpdate) -> Result<Source> { unimplemented!() }
+        async fn update(&self, _id: Uuid, _u: SourceUpdate) -> Result<Source> {
+            unimplemented!()
+        }
     }
 
     #[async_trait]
     impl IEntryStore for FailingEntryStore {
-        async fn create(&self, _e: Entry) -> Result<()> { Ok(()) }
-        async fn get(&self, _id: Uuid) -> Result<Option<Entry>> { Ok(None) }
-        async fn get_by_url(&self, _u: &str) -> Result<Option<Entry>> { Ok(None) }
-        async fn get_by_content_hash(&self, _h: &str) -> Result<Option<Entry>> { Ok(None) }
-        async fn list_by_source(&self, _id: Uuid) -> Result<Vec<Entry>> { Ok(vec![]) }
+        async fn create(&self, _e: Entry) -> Result<()> {
+            Ok(())
+        }
+        async fn get(&self, _id: Uuid) -> Result<Option<Entry>> {
+            Ok(None)
+        }
+        async fn get_by_url(&self, _u: &str) -> Result<Option<Entry>> {
+            Ok(None)
+        }
+        async fn get_by_content_hash(&self, _h: &str) -> Result<Option<Entry>> {
+            Ok(None)
+        }
+        async fn list_by_source(&self, _id: Uuid) -> Result<Vec<Entry>> {
+            Ok(vec![])
+        }
         async fn list(&self) -> Result<Vec<Entry>> {
             Err(anyhow::anyhow!("disk read failed"))
         }
-        async fn update(&self, _id: Uuid, _u: EntryUpdate) -> Result<Entry> { unimplemented!() }
+        async fn update(&self, _id: Uuid, _u: EntryUpdate) -> Result<Entry> {
+            unimplemented!()
+        }
     }
 
     #[tokio::test]

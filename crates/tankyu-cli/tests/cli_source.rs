@@ -1,5 +1,5 @@
 mod common;
-use common::{cmd, create_fixture, write_json, TOPIC_ID, SOURCE_ID};
+use common::{cmd, create_fixture, write_json, SOURCE_ID, TOPIC_ID};
 
 #[test]
 fn source_list_plain() {
