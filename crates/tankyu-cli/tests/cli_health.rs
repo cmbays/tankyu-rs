@@ -11,7 +11,7 @@ fn patch_source_recently_checked(dir: &tempfile::TempDir) {
     write_json(
         dir.path().join(format!("sources/{SOURCE_ID}.json")),
         &serde_json::json!({
-            "id": SOURCE_ID, "type": "github-repo", "name": "rust-lang/rust",
+            "id": SOURCE_ID, "type": "github-repo", "name": "rust-lang-rust",
             "url": "https://github.com/rust-lang/rust", "state": "active",
             "discoveredVia": null, "discoveryReason": null,
             "lastCheckedAt": recently, "lastNewContentAt": null,

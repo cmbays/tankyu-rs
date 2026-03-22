@@ -52,14 +52,16 @@ pub fn name_from_url(url: &str) -> String {
     let without_query = without_scheme.split('?').next().unwrap_or(without_scheme);
     let parts: Vec<&str> = without_query.split('/').filter(|s| !s.is_empty()).collect();
     // parts[0] = hostname; parts[1..] = path segments
-    parts.get(1).map_or_else(
+    let raw = parts.get(1).map_or_else(
         || parts.first().copied().unwrap_or(url).to_string(),
         |seg1| {
             parts
                 .get(2)
                 .map_or_else(|| (*seg1).to_string(), |seg2| format!("{seg1}/{seg2}"))
         },
-    )
+    );
+    // Slugify: replace path separators and dots with dashes for a human-friendly name.
+    raw.replace(['/', '.'], "-")
 }
 
 #[cfg(test)]
@@ -216,7 +218,15 @@ mod tests {
     fn github_repo_name() {
         assert_eq!(
             name_from_url("https://github.com/rust-lang/rust"),
-            "rust-lang/rust"
+            "rust-lang-rust"
+        );
+    }
+
+    #[test]
+    fn github_repo_name_with_dashes() {
+        assert_eq!(
+            name_from_url("https://github.com/tokio-rs/tokio"),
+            "tokio-rs-tokio"
         );
     }
 
@@ -227,7 +237,15 @@ mod tests {
 
     #[test]
     fn hostname_fallback() {
-        assert_eq!(name_from_url("https://example.com"), "example.com");
+        assert_eq!(name_from_url("https://example.com"), "example-com");
+    }
+
+    #[test]
+    fn blog_hostname_slug() {
+        assert_eq!(
+            name_from_url("https://blog.rust-lang.org"),
+            "blog-rust-lang-org"
+        );
     }
 
     #[test]

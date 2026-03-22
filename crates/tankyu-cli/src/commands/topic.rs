@@ -8,6 +8,10 @@ pub async fn list(ctx: &AppContext) -> Result<()> {
         println!("{}", serde_json::to_string(&topics)?);
         return Ok(());
     }
+    if topics.is_empty() {
+        println!("No topics yet. Create one with: tankyu topic create <name>");
+        return Ok(());
+    }
     let mut table = comfy_table::Table::new();
     table.set_header(["Name", "Tags", "Scans"]);
     for t in &topics {
@@ -56,6 +60,7 @@ pub async fn create(ctx: &AppContext, name: &str, description: &str, tags_csv: &
         return Ok(());
     }
     println!("Created topic: {} ({})", topic.name, topic.id);
+    println!("  slug: {}", topic.name);
     if !tags.is_empty() {
         println!("  Tags: {}", tags.join(", "));
     }

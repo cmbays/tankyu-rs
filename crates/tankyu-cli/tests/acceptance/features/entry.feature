@@ -5,7 +5,6 @@ Feature: Entry management
 
   # --- List ---
 
-  @wip
   Scenario: List entries when none exist
     When I run "entry list"
     Then the command exits successfully
@@ -51,11 +50,10 @@ Feature: Entry management
     And stdout contains "tokio-rs-tokio"
     And stdout contains "rust"
 
-  @wip
   Scenario: Inspect a non-existent entry fails
     When I run "entry inspect does-not-exist"
     Then the command exits with failure
-    And stderr contains "not found"
+    And stderr contains "not a valid entry ID"
 
   # --- Update ---
 
@@ -78,8 +76,7 @@ Feature: Entry management
     Then the command exits with failure
     And stderr contains "at least one"
 
-  @wip
   Scenario: Update a non-existent entry fails
     When I run "entry update does-not-exist --state read"
     Then the command exits with failure
-    And stderr contains "not found"
+    And stderr contains "not a valid entry ID"

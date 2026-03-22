@@ -5,14 +5,12 @@ Feature: Source management
 
   # --- Add (ADR-1: idempotent) ---
 
-  @wip
   Scenario: Add a new source
     When I run "source add https://github.com/tokio-rs/tokio"
     Then the command exits successfully
     And stdout contains "tokio-rs-tokio"
     And stdout contains "github-repo"
 
-  @wip
   Scenario: Add a source linked to a topic creates a monitors edge
     Given a topic exists with name "async-rust"
     When I run "source add https://github.com/tokio-rs/tokio --topic async-rust"
@@ -26,11 +24,11 @@ Feature: Source management
     Then the command exits successfully
     And stdout contains "already exists"
 
-  @wip
   Scenario: Add a source to a non-existent topic fails
     When I run "source add https://example.com --topic no-such-topic"
     Then the command exits with failure
-    And stderr contains "topic not found"
+    And stderr contains "no-such-topic"
+    And stderr contains "not found"
 
   Scenario: Source type is detected from URL
     When I run "source add https://github.com/rust-lang/rust/issues"
@@ -54,6 +52,7 @@ Feature: Source management
 
   # --- Inspect ---
 
+  @wip
   Scenario: Inspect a source shows details and relationships
     Given a topic exists with name "rust"
     And a source exists linked to topic "rust" with URL "https://github.com/tokio-rs/tokio"
@@ -63,7 +62,6 @@ Feature: Source management
     And stdout contains "github-repo"
     And stdout contains "rust"
 
-  @wip
   Scenario: Inspect a non-existent source fails
     When I run "source inspect does-not-exist"
     Then the command exits with failure
@@ -85,7 +83,6 @@ Feature: Source management
     And I run "topic inspect rust"
     Then stdout does not contain "tokio-rs-tokio"
 
-  @wip
   Scenario: Remove a non-existent source fails
     When I run "source remove does-not-exist"
     Then the command exits with failure

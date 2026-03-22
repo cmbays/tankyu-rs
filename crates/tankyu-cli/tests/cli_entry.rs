@@ -119,7 +119,7 @@ fn entry_list_filtered_by_source() {
     let dir = create_fixture();
     let out = cmd(&dir)
         .env("NO_COLOR", "1")
-        .args(["entry", "list", "--source", "rust-lang/rust"])
+        .args(["entry", "list", "--source", "rust-lang-rust"])
         .output()
         .unwrap();
     assert!(

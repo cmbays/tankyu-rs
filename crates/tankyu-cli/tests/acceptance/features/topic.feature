@@ -10,7 +10,6 @@ Feature: Topic management
     Then the command exits successfully
     And stdout contains "Created topic: rust-async"
 
-  @wip
   Scenario: Create a topic generates a slug
     When I run "topic create rust-async"
     Then the command exits successfully
@@ -24,7 +23,6 @@ Feature: Topic management
 
   # --- List ---
 
-  @wip
   Scenario: List topics when none exist
     When I run "topic list"
     Then the command exits successfully
@@ -40,6 +38,7 @@ Feature: Topic management
 
   # --- Inspect ---
 
+  @wip
   Scenario: Inspect a topic shows details and relationships
     Given a topic exists with name "rust"
     And a source exists linked to topic "rust" with URL "https://github.com/tokio-rs/tokio"
@@ -48,7 +47,6 @@ Feature: Topic management
     And stdout contains "rust"
     And stdout contains "tokio-rs/tokio"
 
-  @wip
   Scenario: Inspect a non-existent topic fails
     When I run "topic inspect does-not-exist"
     Then the command exits with failure

@@ -161,6 +161,9 @@ pub async fn add(
     } else {
         None
     };
+    // Check if this URL is already tracked (for idempotent messaging).
+    let was_known = ctx.source_mgr.get_by_url(url).await?.is_some();
+
     let source = ctx
         .source_mgr
         .add(AddSourceInput {
@@ -175,11 +178,19 @@ pub async fn add(
         println!("{}", serde_json::to_string(&source)?);
         return Ok(());
     }
-    println!(
-        "Added source: {} ({})",
-        source.name,
-        type_str(&source.r#type)
-    );
+    if was_known {
+        println!(
+            "Source {} already exists ({})",
+            source.name,
+            type_str(&source.r#type)
+        );
+    } else {
+        println!(
+            "Added source: {} ({})",
+            source.name,
+            type_str(&source.r#type)
+        );
+    }
     println!("  URL: {}", source.url);
     println!("  ID:  {}", source.id);
     if let Some(t) = topic {

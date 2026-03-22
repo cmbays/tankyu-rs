@@ -5,5 +5,5 @@ expression: stdout
 +-------+----------------+-------------+---------------+
 | Kind  | Source         | Type        | Detail        |
 +======================================================+
-| stale | rust-lang/rust | github-repo | never checked |
+| stale | rust-lang-rust | github-repo | never checked |
 +-------+----------------+-------------+---------------+

@@ -68,6 +68,16 @@ impl SourceManager {
         Ok(all.into_iter().find(|s| s.name == name))
     }
 
+    /// Find a source by its URL (exact match).
+    ///
+    /// Returns `None` if no source with that URL exists.
+    ///
+    /// # Errors
+    /// Returns an error if the store fails.
+    pub async fn get_by_url(&self, url: &str) -> Result<Option<Source>> {
+        self.store.get_by_url(url).await
+    }
+
     /// List sources monitored by a topic (via `Monitors` edges in the graph).
     ///
     /// # Errors
@@ -448,7 +458,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(result.url, "https://github.com/rust-lang/rust");
-        assert_eq!(result.name, "rust-lang/rust");
+        assert_eq!(result.name, "rust-lang-rust");
         assert!(matches!(result.state, SourceState::Active));
         assert_eq!(result.check_count, 0);
     }
