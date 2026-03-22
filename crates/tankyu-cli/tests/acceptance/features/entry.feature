@@ -18,11 +18,22 @@ Feature: Entry management
 
   Scenario: Filter entries by source
     Given a source "tokio-rs-tokio" exists with entries
+    And a source "rust-lang-blog" exists with entries
     When I run "entry list --source tokio-rs-tokio"
     Then the command exits successfully
     And all listed entries belong to source "tokio-rs-tokio"
+    And stdout does not contain entries from source "rust-lang-blog"
 
-  # --- Unclassified (graph traversal via negation) ---
+  Scenario: Filter entries by topic
+    Given a topic "rust" exists monitoring source "tokio-rs-tokio"
+    And entries exist for source "tokio-rs-tokio"
+    And a source "unrelated-blog" exists with entries
+    When I run "entry list --topic rust"
+    Then the command exits successfully
+    And all listed entries belong to source "tokio-rs-tokio"
+    And stdout does not contain entries from source "unrelated-blog"
+
+  # --- Unclassified ---
 
   Scenario: List unclassified entries excludes tagged entries
     Given an entry "alpha-post" is tagged with topic "rust"

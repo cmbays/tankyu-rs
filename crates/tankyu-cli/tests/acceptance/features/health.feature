@@ -28,6 +28,19 @@ Feature: Source health checking
     Then the command exits with failure
     And stdout contains "dormant"
 
+  Scenario: Source checked at exactly stale threshold is not stale
+    Given a source exists last checked 7 days ago
+    When I run "health"
+    Then the command exits successfully
+    And stdout contains "All sources healthy"
+
+  Scenario: Source checked at exactly dormant threshold is not dormant
+    Given a source exists last checked 30 days ago
+    When I run "health"
+    Then the command exits with failure
+    And stdout contains "stale"
+    And stdout does not contain "dormant"
+
   Scenario: Source with no entries is flagged as empty
     Given a source exists that has no entries
     When I run "health"

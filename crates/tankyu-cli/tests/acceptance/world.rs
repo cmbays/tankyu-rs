@@ -10,6 +10,8 @@ fn write_json(path: impl AsRef<Path>, value: &serde_json::Value) {
     std::fs::write(path, serde_json::to_string_pretty(value).unwrap()).unwrap();
 }
 
+pub const DEFAULT_SOURCE_ID: &str = "22222222-2222-2222-2222-222222222222";
+
 /// Shared state carried through all steps of one cucumber scenario.
 #[derive(Debug, World)]
 #[world(init = Self::new)]
@@ -18,6 +20,15 @@ pub struct TankyuWorld {
     pub last_stdout: String,
     pub last_stderr: String,
     pub last_exit_code: Option<i32>,
+    /// Maps friendly entry names (e.g. "alpha-post") to their UUIDs.
+    /// Used by `run_cmd` to substitute slugs in commands like `entry inspect alpha-post`.
+    pub entry_ids: std::collections::HashMap<String, String>,
+    /// Tracks titles of entries created by Given steps, for Then step assertions.
+    pub created_entry_titles: Vec<String>,
+    /// Maps source name → entry titles created for that source, for exclusion assertions.
+    pub source_entry_titles: std::collections::HashMap<String, Vec<String>>,
+    /// Maps topic name → UUID, mirroring `entry_ids` for topics.
+    pub topic_ids: std::collections::HashMap<String, String>,
 }
 
 impl TankyuWorld {
@@ -50,6 +61,10 @@ impl TankyuWorld {
             last_stdout: String::new(),
             last_stderr: String::new(),
             last_exit_code: None,
+            entry_ids: std::collections::HashMap::new(),
+            created_entry_titles: Vec::new(),
+            source_entry_titles: std::collections::HashMap::new(),
+            topic_ids: std::collections::HashMap::new(),
         }
     }
 
@@ -57,7 +72,9 @@ impl TankyuWorld {
         let mut c = Command::cargo_bin("tankyu").unwrap();
         c.env("TANKYU_DIR", self.data_dir.path());
         for arg in args {
-            c.arg(arg);
+            // Substitute known entry slugs with their UUIDs
+            let resolved = self.entry_ids.get(*arg).map_or(*arg, String::as_str);
+            c.arg(resolved);
         }
         let out = c.output().unwrap();
         self.last_stdout = String::from_utf8_lossy(&out.stdout).to_string();
@@ -65,12 +82,42 @@ impl TankyuWorld {
         self.last_exit_code = out.status.code();
     }
 
+    /// Write an entry and register its slug (title used as the slug key).
+    pub fn write_named_entry(
+        &mut self,
+        slug: &str,
+        source_id: &str,
+        state: &str,
+        signal: Option<&str>,
+    ) {
+        let id = uuid::Uuid::new_v4().to_string();
+        self.entry_ids.insert(slug.to_string(), id.clone());
+        self.created_entry_titles.push(slug.to_string());
+        write_json(
+            self.data_dir.path().join(format!("entries/{id}.json")),
+            &serde_json::json!({
+                "id": id,
+                "sourceId": source_id,
+                "type": "article",
+                "title": slug,
+                "url": format!("https://example.com/{slug}"),
+                "summary": null,
+                "contentHash": null,
+                "state": state,
+                "signal": signal,
+                "scannedAt": "2025-01-15T10:00:00Z",
+                "metadata": null,
+                "createdAt": "2025-01-15T10:00:00Z"
+            }),
+        );
+    }
+
     pub fn write_entry(&self, id: &str, title: &str, state: &str, signal: Option<&str>) {
         write_json(
             self.data_dir.path().join(format!("entries/{id}.json")),
             &serde_json::json!({
                 "id": id,
-                "sourceId": "22222222-2222-2222-2222-222222222222",
+                "sourceId": DEFAULT_SOURCE_ID,
                 "type": "article",
                 "title": title,
                 "url": format!("https://example.com/{id}"),
@@ -119,7 +166,8 @@ impl TankyuWorld {
         );
     }
 
-    pub fn write_topic(&self, id: &str, name: &str) {
+    pub fn write_topic(&mut self, id: &str, name: &str) {
+        self.topic_ids.insert(name.to_string(), id.to_string());
         write_json(
             self.data_dir.path().join(format!("topics/{id}.json")),
             &serde_json::json!({

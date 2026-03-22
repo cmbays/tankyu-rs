@@ -184,16 +184,31 @@ pub async fn inspect(ctx: &AppContext, id: &str) -> Result<()> {
         return Ok(());
     }
 
+    let source_name = match ctx.source_mgr.get_by_id(e.source_id).await {
+        Ok(Some(s)) => s.name,
+        Ok(None) => e.source_id.to_string(),
+        Err(_) => {
+            eprintln!("warning: could not look up source {}", e.source_id);
+            e.source_id.to_string()
+        }
+    };
+
+    let topics = ctx.topic_mgr.list_by_entry(e.id).await?;
+    let topic_names: Vec<&str> = topics.iter().map(|t| t.name.as_str()).collect();
+
     println!("ID:        {}", e.id);
     println!("Type:      {}", type_str(&e.r#type));
     println!("State:     {}", state_str(&e.state));
     println!("Signal:    {}", signal_str(e.signal.as_ref()));
     println!("Title:     {}", e.title);
     println!("URL:       {}", e.url);
-    println!("Source:    {}", e.source_id);
+    println!("Source:    {source_name}");
     println!("Summary:   {}", e.summary.as_deref().unwrap_or("—"));
     println!("Scanned:   {}", e.scanned_at);
     println!("Created:   {}", e.created_at.format("%Y-%m-%d"));
+    if !topic_names.is_empty() {
+        println!("Topics:    {}", topic_names.join(", "));
+    }
     Ok(())
 }
 
