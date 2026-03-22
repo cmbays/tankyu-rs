@@ -1,8 +1,6 @@
 use anyhow::Result;
-use tankyu_core::{
-    domain::types::{SourceRole, SourceState, SourceType},
-    features::source::source_manager::AddSourceInput,
-};
+use tankyu_core::domain::types::{SourceRole, SourceState, SourceType};
+use tankyu_core::features::source::source_manager::AddSourceInput;
 
 use crate::context::AppContext;
 
@@ -137,6 +135,13 @@ pub async fn inspect(ctx: &AppContext, name: &str) -> Result<()> {
     );
     println!("Last checked: {last_checked}");
     println!("Created:      {}", s.created_at.format("%Y-%m-%d"));
+
+    // Show related topics (via Monitors edges pointing to this source).
+    let topics = ctx.topic_mgr.list_by_source(s.id).await?;
+    if !topics.is_empty() {
+        let names: Vec<_> = topics.iter().map(|t| t.name.as_str()).collect();
+        println!("Topics:       {}", names.join(", "));
+    }
     Ok(())
 }
 

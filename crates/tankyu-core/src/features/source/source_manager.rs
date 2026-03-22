@@ -91,8 +91,11 @@ impl SourceManager {
             .collect();
         let mut sources = Vec::with_capacity(source_ids.len());
         for id in source_ids {
-            if let Some(s) = self.store.get(id).await? {
-                sources.push(s);
+            match self.store.get(id).await? {
+                Some(s) => sources.push(s),
+                None => eprintln!(
+                    "warning: orphaned edge references source {id} which no longer exists"
+                ),
             }
         }
         Ok(sources)
@@ -163,7 +166,13 @@ impl SourceManager {
         Ok(source)
     }
 
-    /// Mark a source as pruned by name. Returns the updated source.
+    /// Remove a source's graph edges and mark it as pruned.
+    /// Returns the updated source.
+    ///
+    /// Note: this operation is not atomic — the source is marked as pruned
+    /// first, then edges are cleaned up. If edge removal fails partway
+    /// through, the source will be pruned but some orphaned edges may remain
+    /// (detectable by `doctor`).
     ///
     /// # Errors
     /// Returns `TankyuError::NotFound` if no source with this name exists.
@@ -172,7 +181,9 @@ impl SourceManager {
             .get_by_name(name)
             .await?
             .ok_or_else(|| TankyuError::NotFound(format!("source '{name}'")))?;
-        self.store
+        let edges = self.graph.get_edges_by_node(source.id).await?;
+        let updated = self
+            .store
             .update(
                 source.id,
                 SourceUpdate {
@@ -180,7 +191,14 @@ impl SourceManager {
                     ..Default::default()
                 },
             )
-            .await
+            .await?;
+        // Then clean up edges — orphaned edges are less harmful than lost edges.
+        for edge in edges {
+            if let Err(e) = self.graph.remove_edge(edge.id).await {
+                eprintln!("warning: failed to remove edge {}: {e}", edge.id);
+            }
+        }
+        Ok(updated)
     }
 
     /// Create a `Monitors` edge from `topic_id` → `source_id` unless one already exists.
@@ -301,7 +319,7 @@ mod tests {
             Ok(())
         }
         async fn remove_edge(&self, _id: Uuid) -> Result<()> {
-            unimplemented!()
+            Ok(())
         }
         async fn get_edges_by_node(&self, node_id: Uuid) -> Result<Vec<Edge>> {
             Ok(self
@@ -645,6 +663,33 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_list_by_topic_skips_orphaned_source() {
+        let topic_id = Uuid::new_v4();
+        let nonexistent_source_id = Uuid::new_v4();
+        let edge = Edge {
+            id: Uuid::new_v4(),
+            from_id: topic_id,
+            from_type: NodeType::Topic,
+            to_id: nonexistent_source_id,
+            to_type: NodeType::Source,
+            edge_type: EdgeType::Monitors,
+            reason: "test".to_string(),
+            score: None,
+            method: None,
+            created_at: Utc::now(),
+        };
+        // Store has no sources — the edge references a source that doesn't exist
+        let store = Arc::new(StubSourceStore::empty());
+        let graph = Arc::new(StubGraphStore { edges: vec![edge] });
+        let mgr = SourceManager::new(store, graph);
+        let result = mgr.list_by_topic(topic_id).await.unwrap();
+        assert!(
+            result.is_empty(),
+            "orphaned edge should be skipped, not cause a panic"
+        );
+    }
+
+    #[tokio::test]
     async fn test_add_monitors_edge_not_blocked_by_different_source_edge() {
         // Mutation killer: && to_id == source_id → || would block new edge when only from_id matches
         struct TrackingGraphStore {
@@ -809,6 +854,85 @@ mod tests {
         let mgr = SourceManager::new(store, graph);
         let result = mgr.remove("to-remove").await.unwrap();
         assert!(matches!(result.state, SourceState::Pruned));
+    }
+
+    #[tokio::test]
+    async fn test_remove_cleans_up_edges() {
+        struct TrackingGraphStore {
+            edges: Vec<Edge>,
+            removed_ids: Mutex<Vec<Uuid>>,
+        }
+        #[async_trait]
+        impl IGraphStore for TrackingGraphStore {
+            async fn add_edge(&self, _e: Edge) -> Result<()> {
+                Ok(())
+            }
+            async fn remove_edge(&self, id: Uuid) -> Result<()> {
+                self.removed_ids.lock().unwrap().push(id);
+                Ok(())
+            }
+            async fn get_edges_by_node(&self, node_id: Uuid) -> Result<Vec<Edge>> {
+                Ok(self
+                    .edges
+                    .iter()
+                    .filter(|e| e.from_id == node_id || e.to_id == node_id)
+                    .cloned()
+                    .collect())
+            }
+            async fn get_neighbors(&self, _id: Uuid, _et: Option<EdgeType>) -> Result<Vec<Edge>> {
+                unimplemented!()
+            }
+            async fn query(&self, _q: GraphQuery) -> Result<Vec<Edge>> {
+                unimplemented!()
+            }
+            async fn list(&self) -> Result<Vec<Edge>> {
+                Ok(self.edges.clone())
+            }
+        }
+
+        let source_id = Uuid::new_v4();
+        let mut source = make_source(source_id, None);
+        source.name = "edge-cleanup".to_string();
+        let edge1_id = Uuid::new_v4();
+        let edge2_id = Uuid::new_v4();
+        let edges = vec![
+            Edge {
+                id: edge1_id,
+                from_id: Uuid::new_v4(),
+                from_type: NodeType::Topic,
+                to_id: source_id,
+                to_type: NodeType::Source,
+                edge_type: EdgeType::Monitors,
+                reason: "test".to_string(),
+                score: None,
+                method: None,
+                created_at: Utc::now(),
+            },
+            Edge {
+                id: edge2_id,
+                from_id: source_id,
+                from_type: NodeType::Source,
+                to_id: Uuid::new_v4(),
+                to_type: NodeType::Topic,
+                edge_type: EdgeType::TaggedWith,
+                reason: "test".to_string(),
+                score: None,
+                method: None,
+                created_at: Utc::now(),
+            },
+        ];
+        let store = Arc::new(StubSourceStore::with_sources(vec![source]));
+        let graph = Arc::new(TrackingGraphStore {
+            edges,
+            removed_ids: Mutex::new(vec![]),
+        });
+        let mgr = SourceManager::new(store, Arc::clone(&graph) as Arc<dyn IGraphStore>);
+        let result = mgr.remove("edge-cleanup").await.unwrap();
+        assert!(matches!(result.state, SourceState::Pruned));
+        let removed: Vec<Uuid> = graph.removed_ids.lock().unwrap().clone();
+        assert_eq!(removed.len(), 2, "both edges should be removed");
+        assert!(removed.contains(&edge1_id));
+        assert!(removed.contains(&edge2_id));
     }
 
     #[tokio::test]

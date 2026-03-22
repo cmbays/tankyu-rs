@@ -10,7 +10,6 @@ Feature: Research graph status
     And stdout contains "0 sources"
     And stdout contains "0 entries"
 
-  @wip
   Scenario: Status reflects created data
     Given a topic exists with name "rust"
     And a source exists linked to topic "rust" with URL "https://github.com/tokio-rs/tokio"

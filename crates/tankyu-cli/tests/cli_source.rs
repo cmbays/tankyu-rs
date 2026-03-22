@@ -1,5 +1,5 @@
 mod common;
-use common::{cmd, create_fixture, write_json};
+use common::{cmd, create_fixture, write_json, SOURCE_ID, TOPIC_ID};
 
 #[test]
 fn source_list_plain() {
@@ -74,6 +74,93 @@ fn source_add_plain() {
         .join("\n")
         + "\n";
     insta::assert_snapshot!(stable);
+}
+
+#[test]
+fn source_inspect_shows_related_topics() {
+    let dir = create_fixture();
+    // Add a monitors edge from topic → source
+    write_json(
+        dir.path().join("graph/edges.json"),
+        &serde_json::json!({
+            "version": 1,
+            "edges": [{
+                "id": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+                "fromId": TOPIC_ID,
+                "fromType": "topic",
+                "toId": SOURCE_ID,
+                "toType": "source",
+                "edgeType": "monitors",
+                "reason": "test",
+                "createdAt": "2025-01-01T00:00:00Z"
+            }]
+        }),
+    );
+    let out = cmd(&dir)
+        .env("NO_COLOR", "1")
+        .args(["source", "inspect", "rust-lang-rust"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert!(
+        stdout.contains("Topics:"),
+        "inspect should show Topics section when monitors edges exist"
+    );
+    assert!(
+        stdout.contains("rust"),
+        "inspect should show the topic name"
+    );
+}
+
+#[test]
+fn source_inspect_ignores_non_monitors_edges() {
+    let dir = create_fixture();
+    // Add a TaggedWith edge (not Monitors) — should NOT show as a topic relationship
+    write_json(
+        dir.path().join("graph/edges.json"),
+        &serde_json::json!({
+            "version": 1,
+            "edges": [{
+                "id": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+                "fromId": TOPIC_ID,
+                "fromType": "topic",
+                "toId": SOURCE_ID,
+                "toType": "source",
+                "edgeType": "tagged-with",
+                "reason": "test",
+                "createdAt": "2025-01-01T00:00:00Z"
+            }]
+        }),
+    );
+    let out = cmd(&dir)
+        .env("NO_COLOR", "1")
+        .args(["source", "inspect", "rust-lang-rust"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert!(
+        !stdout.contains("Topics:"),
+        "TaggedWith edge should not produce a Topics section"
+    );
+}
+
+#[test]
+fn source_inspect_no_topics_without_edges() {
+    let dir = create_fixture();
+    // No monitors edges in the default fixture
+    let out = cmd(&dir)
+        .env("NO_COLOR", "1")
+        .args(["source", "inspect", "rust-lang-rust"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert!(
+        !stdout.contains("Topics:"),
+        "inspect should NOT show Topics section when no monitors edges exist"
+    );
 }
 
 #[test]

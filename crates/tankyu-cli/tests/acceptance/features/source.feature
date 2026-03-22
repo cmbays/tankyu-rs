@@ -52,7 +52,6 @@ Feature: Source management
 
   # --- Inspect ---
 
-  @wip
   Scenario: Inspect a source shows details and relationships
     Given a topic exists with name "rust"
     And a source exists linked to topic "rust" with URL "https://github.com/tokio-rs/tokio"
