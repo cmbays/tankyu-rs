@@ -72,7 +72,9 @@ impl TopicManager {
             match self.store.get(id).await? {
                 Some(t) => topics.push(t),
                 None => {
-                    eprintln!("warning: orphaned edge references topic {id} which no longer exists");
+                    eprintln!(
+                        "warning: orphaned edge references topic {id} which no longer exists"
+                    );
                 }
             }
         }
